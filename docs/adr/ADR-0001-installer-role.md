@@ -20,7 +20,7 @@ without duplicating framework, preset, or skeleton logic.
 2. Package type is `library`.
 3. Canonical global binary is `durin` only.
 4. V1 owns only `new`, help, and version.
-5. Applications are created via Packagist (`ereborcodeforge/durin-app:^0.1.1`).
+5. Applications are created via Packagist (`ereborcodeforge/durin-app:^0.1.2`).
 6. The installer does not depend on `durin-core`, `durin-presets`, or `durin-architecture`.
 7. V1 creates the minimal application only.
 8. V1 does not proxy arbitrary Forge/project commands.

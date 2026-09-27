@@ -17,7 +17,7 @@ No custom Composer repositories are required or injected.
 
 ## Distribution smoke
 
-After `v0.1.0` is on Packagist:
+After `v0.1.1` is on Packagist:
 
 ```bash
 export COMPOSER_HOME="<temporary-composer-home>"
@@ -44,6 +44,7 @@ Assertions:
 - `composer.json` name is `app/smoke-app`
 - `durin.yaml` `application.name` is `smoke-app`
 - `APP_NAME=smoke-app`
+- `config/app.php` resolves name to `smoke-app`
 - `modules: false` preserved
 - Doctor and optimize exit `0`
 

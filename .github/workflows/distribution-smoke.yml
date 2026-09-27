@@ -1,7 +1,7 @@
 name: Distribution smoke
 
 # Proves real Packagist global install of durin-installer + durin new.
-# Skips only while Packagist still lacks ereborcodeforge/durin-installer >= 0.1.0.
+# Requires Packagist ereborcodeforge/durin-installer >= 0.1.1 (path output + durin-app ^0.1.2).
 
 on:
   workflow_dispatch:
@@ -26,7 +26,7 @@ jobs:
           coverage: none
           tools: composer:v2
 
-      - name: Resolve Packagist installer >= 0.1.0
+      - name: Resolve Packagist installer >= 0.1.1
         id: packagist
         run: |
           set -euo pipefail
@@ -44,7 +44,7 @@ jobs:
             $best = null;
             foreach ($j["packages"]["ereborcodeforge/durin-installer"] ?? [] as $pkg) {
               $raw = ltrim((string) ($pkg["version"] ?? ""), "v");
-              if ($raw === "" || version_compare($raw, "0.1.0", "<")) {
+              if ($raw === "" || version_compare($raw, "0.1.1", "<")) {
                 continue;
               }
               if ($best === null || version_compare($raw, $best, ">")) {
@@ -58,13 +58,13 @@ jobs:
 
           if [ -z "${version}" ]; then
             echo "available=false" >> "$GITHUB_OUTPUT"
-            echo "::notice::Packagist has no durin-installer >= 0.1.0 yet — skip until release syncs."
+            echo "::notice::Packagist has no durin-installer >= 0.1.1 yet — skip until release syncs."
             exit 0
           fi
 
           echo "available=true" >> "$GITHUB_OUTPUT"
           echo "version=${version}" >> "$GITHUB_OUTPUT"
-          echo "Resolved Packagist version >= 0.1.0: ${version}"
+          echo "Resolved Packagist version >= 0.1.1: ${version}"
 
       - name: Fresh global require + durin new
         if: steps.packagist.outputs.available == 'true'
@@ -91,6 +91,7 @@ jobs:
           test -f composer.json
           test -f durin.yaml
           test -f .env
+          test -f config/app.php
           test -f src/Kernel.php
           test -x vendor/bin/durin
 
@@ -110,6 +111,21 @@ jobs:
           grep -q '^  name: smoke-app$' durin.yaml
           grep -q 'modules: false' durin.yaml
           grep -q '^APP_NAME=smoke-app$' .env
+
+          php -r '
+            $env = (string) file_get_contents(".env");
+            if (!preg_match("/^APP_NAME=(.*)$/m", $env, $m)) {
+              fwrite(STDERR, "APP_NAME missing in .env\n");
+              exit(1);
+            }
+            putenv("APP_NAME=" . $m[1]);
+            $config = include "config/app.php";
+            if (($config["name"] ?? null) !== "smoke-app") {
+              fwrite(STDERR, "config/app.php name expected smoke-app, got: " . var_export($config["name"] ?? null, true) . "\n");
+              exit(1);
+            }
+            echo "config/app.php APP_NAME resolution ok\n";
+          '
 
           vendor/bin/durin doctor
           vendor/bin/durin optimize

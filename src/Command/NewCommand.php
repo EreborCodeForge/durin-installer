@@ -99,7 +99,7 @@ final class NewCommand
         $this->line("  {$path}");
         $this->line('');
         $this->line('Next:');
-        $this->line("  cd {$slug}");
+        $this->line("  cd {$path}");
         $this->line('  vendor/bin/durin doctor');
         $this->line('  vendor/bin/durin dev');
 

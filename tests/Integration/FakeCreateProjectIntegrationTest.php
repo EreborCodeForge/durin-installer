@@ -97,6 +97,8 @@ final class FakeCreateProjectIntegrationTest extends TestCase
         rewind($stdout);
         $out = stream_get_contents($stdout) ?: '';
         self::assertStringContainsString('Durin application created: smoke-app', $out);
+        self::assertStringContainsString('Path:' . PHP_EOL . '  ' . $created, $out);
+        self::assertStringContainsString('Next:' . PHP_EOL . '  cd ' . $created, $out);
         self::assertStringContainsString('vendor/bin/durin doctor', $out);
     }
 

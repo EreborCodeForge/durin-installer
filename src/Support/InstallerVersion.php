@@ -9,5 +9,5 @@ namespace EreborCodeForge\Durin\Installer\Support;
  */
 final class InstallerVersion
 {
-    public const string VERSION = '0.1.0';
+    public const string VERSION = '0.1.1';
 }

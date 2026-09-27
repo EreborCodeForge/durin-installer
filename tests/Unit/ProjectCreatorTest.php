@@ -46,7 +46,7 @@ final class ProjectCreatorTest extends TestCase
             '--no-interaction',
             '--prefer-dist',
         ], $command);
-        self::assertSame('ereborcodeforge/durin-app:^0.1.1', $command[2]);
+        self::assertSame('ereborcodeforge/durin-app:^0.1.2', $command[2]);
     }
 
     public function testCreateProjectFailurePropagatesExitCode(): void

@@ -12,7 +12,7 @@ namespace EreborCodeForge\Durin\Installer\Support;
 final class AppPackage
 {
     public const string NAME = 'ereborcodeforge/durin-app';
-    public const string CONSTRAINT = '^0.1.1';
+    public const string CONSTRAINT = '^0.1.2';
 
     public static function createProjectArgument(): string
     {

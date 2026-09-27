@@ -25,7 +25,7 @@ V1 of the installer owns only `new`, `--help`, and `--version`. It does **not** 
 ## Fallback without the installer
 
 ```bash
-composer create-project ereborcodeforge/durin-app:^0.1.1 billing-api
+composer create-project ereborcodeforge/durin-app:^0.1.2 billing-api
 ```
 
 ## What this package is
