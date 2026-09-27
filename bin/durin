@@ -1,0 +1,29 @@
+#!/usr/bin/env php
+<?php
+
+declare(strict_types=1);
+
+use EreborCodeForge\Durin\Installer\Application;
+
+$autoloadCandidates = [
+    dirname(__DIR__) . '/vendor/autoload.php',
+    dirname(__DIR__, 3) . '/autoload.php',
+];
+
+$autoload = null;
+foreach ($autoloadCandidates as $candidate) {
+    if (is_file($candidate)) {
+        $autoload = $candidate;
+        break;
+    }
+}
+
+if ($autoload === null) {
+    fwrite(STDERR, "Unable to find Composer autoload.php.\n");
+    exit(1);
+}
+
+require $autoload;
+
+$app = new Application(installerRoot: dirname(__DIR__));
+exit($app->run($argv));

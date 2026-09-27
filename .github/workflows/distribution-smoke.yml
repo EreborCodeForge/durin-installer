@@ -1,0 +1,117 @@
+name: Distribution smoke
+
+# Proves real Packagist global install of durin-installer + durin new.
+# Skips only while Packagist still lacks ereborcodeforge/durin-installer >= 0.1.0.
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  distribution-smoke:
+    name: Packagist global-install smoke
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.5'
+          extensions: json, pdo, pdo_sqlite, sockets, msgpack
+          coverage: none
+          tools: composer:v2
+
+      - name: Resolve Packagist installer >= 0.1.0
+        id: packagist
+        run: |
+          set -euo pipefail
+          code=$(curl -s -o /tmp/durin-installer-packagist.json -w "%{http_code}" \
+            https://repo.packagist.org/p2/ereborcodeforge/durin-installer.json || echo 000)
+          echo "Packagist HTTP status: ${code}"
+          if [ "${code}" != "200" ]; then
+            echo "available=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::ereborcodeforge/durin-installer not on Packagist yet — skip distribution smoke."
+            exit 0
+          fi
+
+          version=$(php -r '
+            $j = json_decode((string) file_get_contents("/tmp/durin-installer-packagist.json"), true, 512, JSON_THROW_ON_ERROR);
+            $best = null;
+            foreach ($j["packages"]["ereborcodeforge/durin-installer"] ?? [] as $pkg) {
+              $raw = ltrim((string) ($pkg["version"] ?? ""), "v");
+              if ($raw === "" || version_compare($raw, "0.1.0", "<")) {
+                continue;
+              }
+              if ($best === null || version_compare($raw, $best, ">")) {
+                $best = $raw;
+              }
+            }
+            if ($best !== null) {
+              echo $best;
+            }
+          ')
+
+          if [ -z "${version}" ]; then
+            echo "available=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::Packagist has no durin-installer >= 0.1.0 yet — skip until release syncs."
+            exit 0
+          fi
+
+          echo "available=true" >> "$GITHUB_OUTPUT"
+          echo "version=${version}" >> "$GITHUB_OUTPUT"
+          echo "Resolved Packagist version >= 0.1.0: ${version}"
+
+      - name: Fresh global require + durin new
+        if: steps.packagist.outputs.available == 'true'
+        working-directory: ${{ runner.temp }}
+        run: |
+          set -euo pipefail
+
+          export COMPOSER_HOME="${RUNNER_TEMP}/composer-home-smoke"
+          mkdir -p "${COMPOSER_HOME}" smoke-root
+          cd smoke-root
+
+          composer global require \
+            ereborcodeforge/durin-installer:^0.1 \
+            --no-interaction \
+            --prefer-dist
+
+          GLOBAL_BIN="$(composer global config bin-dir --absolute)"
+          test -x "${GLOBAL_BIN}/durin"
+
+          "${GLOBAL_BIN}/durin" new smoke-app
+
+          cd smoke-app
+
+          test -f composer.json
+          test -f durin.yaml
+          test -f .env
+          test -f src/Kernel.php
+          test -x vendor/bin/durin
+
+          php -r '
+            $json = json_decode(file_get_contents("composer.json"), true, 512, JSON_THROW_ON_ERROR);
+            if (!empty($json["repositories"])) {
+              fwrite(STDERR, "custom repositories must not exist\n");
+              exit(1);
+            }
+            if (($json["name"] ?? "") !== "app/smoke-app") {
+              fwrite(STDERR, "expected composer name app/smoke-app\n");
+              exit(1);
+            }
+            echo "composer identity ok\n";
+          '
+
+          grep -q '^  name: smoke-app$' durin.yaml
+          grep -q 'modules: false' durin.yaml
+          grep -q '^APP_NAME=smoke-app$' .env
+
+          vendor/bin/durin doctor
+          vendor/bin/durin optimize
+
+          test -n "$(find var/cache -type f ! -name .gitkeep | head -1)"
