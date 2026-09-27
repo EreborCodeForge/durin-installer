@@ -84,13 +84,20 @@ final class Application
     {
         $debug = $this->debug ?? (getenv('DURIN_INSTALLER_DEBUG') === '1');
 
-        $runner = $this->processRunner ?? new ProcOpenProcessRunner();
+        $stdout = $this->stdout ?? STDOUT;
+        $stderr = $this->stderr ?? STDERR;
+
+        $runner = $this->processRunner ?? new ProcOpenProcessRunner(
+            liveStdout: $stdout,
+            liveStderr: $stderr,
+        );
         $locator = $this->composerLocator ?? new ComposerLocator();
         $creator = new ProjectCreator(
             $runner,
             $locator,
             debug: $debug,
-            output: $this->stderr,
+            output: $stderr,
+            statusOutput: $stdout,
         );
 
         $command = new NewCommand(

@@ -116,6 +116,7 @@ final class NewCommandPathOutputTest extends TestCase
         self::assertStringContainsString('Path:' . PHP_EOL . '  ' . $expectedPath, $out);
         self::assertStringContainsString('Next:' . PHP_EOL . '  cd ' . $expectedPath, $out);
         self::assertDoesNotMatchRegularExpression('/^  cd billing$/m', $out);
+        self::assertStringContainsString('Creating application via Composer create-project...', $out);
     }
 
     public function scaffoldFakeApp(string $target): void

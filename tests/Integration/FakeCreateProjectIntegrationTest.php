@@ -96,10 +96,14 @@ final class FakeCreateProjectIntegrationTest extends TestCase
 
         rewind($stdout);
         $out = stream_get_contents($stdout) ?: '';
+        self::assertStringContainsString('Creating application via Composer create-project...', $out);
+        self::assertStringContainsString('Customizing application identity...', $out);
+        self::assertStringContainsString('Running Durin Doctor...', $out);
         self::assertStringContainsString('Durin application created: smoke-app', $out);
         self::assertStringContainsString('Path:' . PHP_EOL . '  ' . $created, $out);
         self::assertStringContainsString('Next:' . PHP_EOL . '  cd ' . $created, $out);
         self::assertStringContainsString('vendor/bin/durin doctor', $out);
+        self::assertStringContainsString('vendor/bin/forge server:install', $out);
     }
 
     public function testTargetConflictExitCode(): void

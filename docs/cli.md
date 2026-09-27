@@ -37,6 +37,15 @@ durin new /home/dev/projects/orders
 
 The application slug is derived from the target directory basename.
 
+During `durin new`, the installer prints stage status and streams Composer/Doctor output live so long installs do not look frozen.
+
+Eregion is intentionally **not** installed by `create-project` / `durin new`. Doctor warnings about a missing Eregion binary are expected until you opt in with:
+
+```bash
+cd <project>
+vendor/bin/forge server:install
+```
+
 ## Debug
 
 ```bash

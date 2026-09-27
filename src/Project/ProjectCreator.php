@@ -22,6 +22,7 @@ final class ProjectCreator
         private readonly ProjectCustomizer $customizer = new ProjectCustomizer(),
         private readonly bool $debug = false,
         private readonly mixed $output = null,
+        private readonly mixed $statusOutput = null,
     ) {
     }
 
@@ -54,6 +55,11 @@ final class ProjectCreator
 
         $this->debugLine('Argv: ' . json_encode($command, JSON_UNESCAPED_SLASHES));
 
+        $this->statusLine('Creating application via Composer create-project...');
+        $this->statusLine('Package: ' . $packageArg);
+        $this->statusLine('Target:  ' . $target->absolutePath());
+        $this->statusLine('');
+
         $result = $this->processRunner->run($command);
 
         if (!$result->isSuccessful()) {
@@ -73,8 +79,14 @@ final class ProjectCreator
         }
 
         try {
+            $this->statusLine('');
+            $this->statusLine('Customizing application identity...');
             $this->customizer->customize($target->absolutePath(), $target->name());
+
+            $this->statusLine('Validating created application...');
             $this->validateCreatedApplication($target->absolutePath());
+
+            $this->statusLine('Running Durin Doctor...');
             $this->runDoctor($target->absolutePath());
         } catch (CreationException $e) {
             throw $e;
@@ -149,6 +161,16 @@ final class ProjectCreator
 
             throw new CreationException($message, ExitCode::POST_CREATE_VALIDATION_FAILURE);
         }
+    }
+
+    private function statusLine(string $line): void
+    {
+        $stream = $this->statusOutput;
+        if (!is_resource($stream)) {
+            return;
+        }
+
+        fwrite($stream, $line . PHP_EOL);
     }
 
     private function debugLine(string $line): void

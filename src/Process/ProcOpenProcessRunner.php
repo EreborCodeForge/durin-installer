@@ -7,10 +7,19 @@ namespace EreborCodeForge\Durin\Installer\Process;
 /**
  * Cross-platform process runner using argument arrays (no shell interpolation).
  *
+ * Reads stdout/stderr concurrently to avoid pipe-buffer deadlocks (common when
+ * Composer writes heavily to STDERR while the parent waits on STDOUT alone).
+ *
  * @internal
  */
 final class ProcOpenProcessRunner implements ProcessRunner
 {
+    public function __construct(
+        private readonly mixed $liveStdout = null,
+        private readonly mixed $liveStderr = null,
+    ) {
+    }
+
     public function run(array $command, ?string $cwd = null): ProcessResult
     {
         if ($command === []) {
@@ -44,18 +53,98 @@ final class ProcOpenProcessRunner implements ProcessRunner
 
         fclose($pipes[0]);
 
-        $stdout = stream_get_contents($pipes[1]);
-        $stderr = stream_get_contents($pipes[2]);
-        fclose($pipes[1]);
-        fclose($pipes[2]);
+        /** @var array<int, resource> $open */
+        $open = [
+            1 => $pipes[1],
+            2 => $pipes[2],
+        ];
+
+        foreach ($open as $stream) {
+            stream_set_blocking($stream, false);
+        }
+
+        $stdout = '';
+        $stderr = '';
+        $idleAfterExit = 0;
+
+        while ($open !== []) {
+            $read = array_values($open);
+            $write = null;
+            $except = null;
+            $ready = @stream_select($read, $write, $except, 1);
+
+            if ($ready === false) {
+                break;
+            }
+
+            foreach ($read as $stream) {
+                $fd = null;
+                foreach ($open as $key => $candidate) {
+                    if ($candidate === $stream) {
+                        $fd = $key;
+                        break;
+                    }
+                }
+                if ($fd === null) {
+                    continue;
+                }
+
+                $chunk = fread($stream, 8192);
+                if ($chunk === false) {
+                    fclose($stream);
+                    unset($open[$fd]);
+                    continue;
+                }
+
+                if ($chunk !== '') {
+                    if ($fd === 1) {
+                        $stdout .= $chunk;
+                        $this->tee($this->liveStdout, $chunk);
+                    } else {
+                        $stderr .= $chunk;
+                        $this->tee($this->liveStderr, $chunk);
+                    }
+                }
+
+                if ($chunk === '' && feof($stream)) {
+                    fclose($stream);
+                    unset($open[$fd]);
+                }
+            }
+
+            $status = proc_get_status($process);
+            if (!$status['running']) {
+                if ($ready === 0) {
+                    ++$idleAfterExit;
+                } else {
+                    $idleAfterExit = 0;
+                }
+
+                if ($idleAfterExit >= 2) {
+                    foreach ($open as $stream) {
+                        fclose($stream);
+                    }
+                    $open = [];
+                }
+            }
+        }
 
         $exitCode = proc_close($process);
 
         return new ProcessResult(
             $exitCode === -1 ? 1 : $exitCode,
-            $stdout === false ? '' : $stdout,
-            $stderr === false ? '' : $stderr,
+            $stdout,
+            $stderr,
         );
+    }
+
+    private function tee(mixed $stream, string $chunk): void
+    {
+        if (!is_resource($stream)) {
+            return;
+        }
+
+        fwrite($stream, $chunk);
     }
 
     /**

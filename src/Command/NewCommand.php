@@ -102,6 +102,9 @@ final class NewCommand
         $this->line("  cd {$path}");
         $this->line('  vendor/bin/durin doctor');
         $this->line('  vendor/bin/durin dev');
+        $this->line('');
+        $this->line('Optional (local Eregion server is not installed by create-project):');
+        $this->line('  vendor/bin/forge server:install');
 
         return ExitCode::SUCCESS;
     }
