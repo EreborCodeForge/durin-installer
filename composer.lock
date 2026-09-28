@@ -4,15 +4,21 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "966f13af06c255446a66876c8a5e4cde",
+    "content-hash": "2b452151d114125eae76209bac4a0bfa",
     "packages": [
         {
             "name": "ereborcodeforge/durin-core",
             "version": "0.1.0",
-            "dist": {
-                "type": "path",
-                "url": "../durin-core",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/EreborCodeForge/durin-core.git",
                 "reference": "e3ea91e4d5238da0229d3f07a35d4915d7087579"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/EreborCodeForge/durin-core/zipball/e3ea91e4d5238da0229d3f07a35d4915d7087579",
+                "reference": "e3ea91e4d5238da0229d3f07a35d4915d7087579",
+                "shasum": ""
             },
             "require": {
                 "php": "^8.5"
@@ -26,16 +32,7 @@
                     "EreborCodeForge\\Durin\\Core\\": "src/"
                 }
             },
-            "autoload-dev": {
-                "psr-4": {
-                    "EreborCodeForge\\Durin\\Core\\Tests\\": "tests/"
-                }
-            },
-            "scripts": {
-                "test": [
-                    "phpunit"
-                ]
-            },
+            "notification-url": "https://packagist.org/downloads/",
             "license": [
                 "MIT"
             ],
@@ -46,18 +43,25 @@
                 }
             ],
             "description": "Project model and deterministic tooling primitives for Durin.",
-            "transport-options": {
-                "symlink": true,
-                "relative": true
-            }
+            "support": {
+                "issues": "https://github.com/EreborCodeForge/durin-core/issues",
+                "source": "https://github.com/EreborCodeForge/durin-core/tree/v0.1.0"
+            },
+            "time": "2026-09-27T00:36:55+00:00"
         },
         {
             "name": "ereborcodeforge/durin-presets",
             "version": "0.2.1",
-            "dist": {
-                "type": "path",
-                "url": "../durin-presets",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/EreborCodeForge/durin-presets.git",
                 "reference": "43ecd98c248167045c648f7992c2f64c8e9f93f9"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/EreborCodeForge/durin-presets/zipball/43ecd98c248167045c648f7992c2f64c8e9f93f9",
+                "reference": "43ecd98c248167045c648f7992c2f64c8e9f93f9",
+                "shasum": ""
             },
             "require": {
                 "ereborcodeforge/durin-core": "^0.1",
@@ -72,16 +76,7 @@
                     "EreborCodeForge\\Durin\\Presets\\": "src/"
                 }
             },
-            "autoload-dev": {
-                "psr-4": {
-                    "EreborCodeForge\\Durin\\Presets\\Tests\\": "tests/"
-                }
-            },
-            "scripts": {
-                "test": [
-                    "phpunit"
-                ]
-            },
+            "notification-url": "https://packagist.org/downloads/",
             "license": [
                 "MIT"
             ],
@@ -92,10 +87,11 @@
                 }
             ],
             "description": "Architecture presets and project-shape policies for Durin.",
-            "transport-options": {
-                "symlink": true,
-                "relative": true
-            }
+            "support": {
+                "issues": "https://github.com/EreborCodeForge/durin-presets/issues",
+                "source": "https://github.com/EreborCodeForge/durin-presets/tree/v0.2.1"
+            },
+            "time": "2026-09-28T01:30:03+00:00"
         }
     ],
     "packages-dev": [
@@ -1794,7 +1790,7 @@
         }
     ],
     "aliases": [],
-    "minimum-stability": "dev",
+    "minimum-stability": "stable",
     "stability-flags": {},
     "prefer-stable": true,
     "prefer-lowest": false,
