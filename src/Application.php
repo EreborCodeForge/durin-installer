@@ -5,12 +5,15 @@ declare(strict_types=1);
 namespace EreborCodeForge\Durin\Installer;
 
 use EreborCodeForge\Durin\Installer\Command\NewCommand;
+use EreborCodeForge\Durin\Installer\Command\PresetsCommand;
 use EreborCodeForge\Durin\Installer\Composer\ComposerLocator;
+use EreborCodeForge\Durin\Installer\Console\TerminalCapabilities;
 use EreborCodeForge\Durin\Installer\Process\ProcOpenProcessRunner;
 use EreborCodeForge\Durin\Installer\Process\ProcessRunner;
 use EreborCodeForge\Durin\Installer\Project\ProjectCreator;
 use EreborCodeForge\Durin\Installer\Support\ExitCode;
 use EreborCodeForge\Durin\Installer\Support\InstallerVersion;
+use EreborCodeForge\Durin\Presets\Registry\PresetRegistry;
 
 /**
  * CLI entrypoint: argv parsing, help, version, and command dispatch.
@@ -27,6 +30,8 @@ final class Application
         private readonly ?string $cwd = null,
         private readonly ?string $installerRoot = null,
         private readonly ?bool $debug = null,
+        private readonly ?PresetRegistry $registry = null,
+        private readonly ?bool $interactive = null,
     ) {
     }
 
@@ -54,6 +59,7 @@ final class Application
 
         return match ($command) {
             'new' => $this->runNew($commandArgs),
+            'presets' => $this->runPresets($commandArgs),
             'help' => $this->printHelp(),
             default => $this->unknownCommand($command),
         };
@@ -83,13 +89,14 @@ final class Application
     private function runNew(array $args): int
     {
         $debug = $this->debug ?? (getenv('DURIN_INSTALLER_DEBUG') === '1');
-
         $stdout = $this->stdout ?? STDOUT;
         $stderr = $this->stderr ?? STDERR;
+        $interactive = $this->interactive ?? TerminalCapabilities::isInteractiveTty($stdout);
 
         $runner = $this->processRunner ?? new ProcOpenProcessRunner(
-            liveStdout: $stdout,
-            liveStderr: $stderr,
+            liveStdout: $debug ? $stdout : null,
+            liveStderr: $debug ? $stderr : null,
+            teeLive: $debug,
         );
         $locator = $this->composerLocator ?? new ComposerLocator();
         $creator = new ProjectCreator(
@@ -98,6 +105,7 @@ final class Application
             debug: $debug,
             output: $stderr,
             statusOutput: $stdout,
+            interactive: $interactive,
         );
 
         $command = new NewCommand(
@@ -106,9 +114,18 @@ final class Application
             $this->stderr,
             $this->cwd,
             $this->installerRoot,
+            $this->registry,
         );
 
         return $command->run($args);
+    }
+
+    /**
+     * @param list<string> $args
+     */
+    private function runPresets(array $args): int
+    {
+        return (new PresetsCommand($this->stdout, $this->stderr, $this->registry))->run($args);
     }
 
     private function unknownCommand(string $command): int
@@ -124,12 +141,14 @@ final class Application
         $this->line('Durin Installer');
         $this->line('');
         $this->line('Usage:');
-        $this->line('  durin new <project>');
+        $this->line('  durin new <project> [--preset=<id>]');
+        $this->line('  durin presets');
         $this->line('  durin --version');
         $this->line('  durin --help');
         $this->line('');
         $this->line('Commands:');
-        $this->line('  new    Create a new Durin application');
+        $this->line('  new       Create a new Durin application');
+        $this->line('  presets   List presets from durin-presets');
 
         return ExitCode::SUCCESS;
     }

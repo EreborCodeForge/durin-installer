@@ -46,7 +46,7 @@ final class ProjectCreatorTest extends TestCase
             '--no-interaction',
             '--prefer-dist',
         ], $command);
-        self::assertSame('ereborcodeforge/durin-app:^0.1.2', $command[2]);
+        self::assertSame('ereborcodeforge/durin-app:^0.2', $command[2]);
     }
 
     public function testCreateProjectFailurePropagatesExitCode(): void
@@ -67,7 +67,7 @@ final class ProjectCreatorTest extends TestCase
         $target = ProjectPath::resolve('billing', $this->tempRoot);
 
         try {
-            $creator->create($target);
+            $creator->create($target, 'minimal');
             self::fail('Expected CreationException');
         } catch (CreationException $e) {
             self::assertSame(ExitCode::CREATE_PROJECT_FAILURE, $e->installerExitCode());
@@ -115,14 +115,22 @@ final class FakeProcessRunner implements ProcessRunner
     {
     }
 
-    public function run(array $command, ?string $cwd = null): ProcessResult
+    public function run(array $command, ?string $cwd = null, ?\EreborCodeForge\Durin\Installer\Process\ProcessObserver $observer = null): ProcessResult
     {
         $this->commands[] = $command;
+        $observer?->onStart();
+        $observer?->onTick();
 
         if ($this->results === []) {
-            return new ProcessResult(0, '', '');
+            $result = new ProcessResult(0, '', '');
+            $observer?->onFinish($result);
+
+            return $result;
         }
 
-        return array_shift($this->results);
+        $result = array_shift($this->results);
+        $observer?->onFinish($result);
+
+        return $result;
     }
 }

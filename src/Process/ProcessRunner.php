@@ -12,5 +12,5 @@ interface ProcessRunner
     /**
      * @param list<string> $command
      */
-    public function run(array $command, ?string $cwd = null): ProcessResult;
+    public function run(array $command, ?string $cwd = null, ?ProcessObserver $observer = null): ProcessResult;
 }

@@ -7,9 +7,6 @@ namespace EreborCodeForge\Durin\Installer\Process;
 /**
  * Cross-platform process runner using argument arrays (no shell interpolation).
  *
- * Reads stdout/stderr concurrently to avoid pipe-buffer deadlocks (common when
- * Composer writes heavily to STDERR while the parent waits on STDOUT alone).
- *
  * @internal
  */
 final class ProcOpenProcessRunner implements ProcessRunner
@@ -17,10 +14,11 @@ final class ProcOpenProcessRunner implements ProcessRunner
     public function __construct(
         private readonly mixed $liveStdout = null,
         private readonly mixed $liveStderr = null,
+        private readonly bool $teeLive = true,
     ) {
     }
 
-    public function run(array $command, ?string $cwd = null): ProcessResult
+    public function run(array $command, ?string $cwd = null, ?ProcessObserver $observer = null): ProcessResult
     {
         if ($command === []) {
             throw new \InvalidArgumentException('Process command must not be empty.');
@@ -51,6 +49,7 @@ final class ProcOpenProcessRunner implements ProcessRunner
             );
         }
 
+        $observer?->onStart();
         fclose($pipes[0]);
 
         /** @var array<int, resource> $open */
@@ -71,10 +70,14 @@ final class ProcOpenProcessRunner implements ProcessRunner
             $read = array_values($open);
             $write = null;
             $except = null;
-            $ready = @stream_select($read, $write, $except, 1);
+            $ready = @stream_select($read, $write, $except, 0, 100000);
 
             if ($ready === false) {
                 break;
+            }
+
+            if ($ready === 0) {
+                $observer?->onTick();
             }
 
             foreach ($read as $stream) {
@@ -99,10 +102,16 @@ final class ProcOpenProcessRunner implements ProcessRunner
                 if ($chunk !== '') {
                     if ($fd === 1) {
                         $stdout .= $chunk;
-                        $this->tee($this->liveStdout, $chunk);
+                        $observer?->onStdout($chunk);
+                        if ($this->teeLive) {
+                            $this->tee($this->liveStdout, $chunk);
+                        }
                     } else {
                         $stderr .= $chunk;
-                        $this->tee($this->liveStderr, $chunk);
+                        $observer?->onStderr($chunk);
+                        if ($this->teeLive) {
+                            $this->tee($this->liveStderr, $chunk);
+                        }
                     }
                 }
 
@@ -130,12 +139,14 @@ final class ProcOpenProcessRunner implements ProcessRunner
         }
 
         $exitCode = proc_close($process);
-
-        return new ProcessResult(
+        $result = new ProcessResult(
             $exitCode === -1 ? 1 : $exitCode,
             $stdout,
             $stderr,
         );
+        $observer?->onFinish($result);
+
+        return $result;
     }
 
     private function tee(mixed $stream, string $chunk): void

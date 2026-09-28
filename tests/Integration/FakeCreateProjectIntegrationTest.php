@@ -6,6 +6,7 @@ namespace EreborCodeForge\Durin\Installer\Tests\Integration;
 
 use EreborCodeForge\Durin\Installer\Application;
 use EreborCodeForge\Durin\Installer\Composer\ComposerLocator;
+use EreborCodeForge\Durin\Installer\Process\ProcessObserver;
 use EreborCodeForge\Durin\Installer\Process\ProcessResult;
 use EreborCodeForge\Durin\Installer\Process\ProcessRunner;
 use EreborCodeForge\Durin\Installer\Support\AppPackage;
@@ -32,24 +33,42 @@ final class FakeCreateProjectIntegrationTest extends TestCase
         $this->removeTree($this->tempRoot);
     }
 
-    public function testNewOrchestratesCreateCustomizeAndDoctor(): void
+    public function testNewOrchestratesCreateCustomizeInitAndDoctor(): void
     {
-        $runner = new RecordingProcessRunner(function (array $command, ?string $cwd) {
+        $runner = new RecordingProcessRunner(function (array $command, ?string $cwd, ?ProcessObserver $observer) {
+            $observer?->onStart();
+
             if (($command[1] ?? null) === 'create-project') {
                 $target = $command[3] ?? '';
                 $this->scaffoldFakeApp($target);
+                $result = new ProcessResult(0, "Created\n", '');
+                $observer?->onFinish($result);
 
-                return new ProcessResult(0, "Created\n", '');
+                return $result;
+            }
+
+            if (($command[1] ?? null) === 'init') {
+                $observer?->onStdout("{\"type\":\"progress\",\"stage\":\"scaffold.apply\",\"message\":\"Applying scaffold\"}\n");
+                $observer?->onStdout("{\"type\":\"complete\",\"preset\":\"minimal\",\"runner\":\"eregion\"}\n");
+                $result = new ProcessResult(0, '', '');
+                $observer?->onFinish($result);
+
+                return $result;
             }
 
             if (($command[1] ?? null) === 'doctor') {
                 self::assertNotNull($cwd);
                 self::assertFileExists($cwd . DIRECTORY_SEPARATOR . '.env');
+                $result = new ProcessResult(0, "OK\n", '');
+                $observer?->onFinish($result);
 
-                return new ProcessResult(0, "OK\n", '');
+                return $result;
             }
 
-            return new ProcessResult(1, '', 'unexpected command');
+            $result = new ProcessResult(1, '', 'unexpected command');
+            $observer?->onFinish($result);
+
+            return $result;
         });
 
         [$stdout, $stderr] = [fopen('php://memory', 'r+'), fopen('php://memory', 'r+')];
@@ -64,6 +83,7 @@ final class FakeCreateProjectIntegrationTest extends TestCase
             stderr: $stderr,
             cwd: $this->tempRoot,
             installerRoot: $this->tempRoot . DIRECTORY_SEPARATOR . 'installer-pkg',
+            interactive: false,
         );
 
         $code = $app->run(['durin', 'new', 'smoke-app']);
@@ -81,29 +101,29 @@ final class FakeCreateProjectIntegrationTest extends TestCase
         );
         self::assertSame('app/smoke-app', $composer['name']);
 
+        // Installer must not mutate durin.yaml.
         $yaml = (string) file_get_contents($created . DIRECTORY_SEPARATOR . 'durin.yaml');
-        self::assertMatchesRegularExpression('/^  name: smoke-app$/m', $yaml);
-        self::assertStringContainsString('modules: false', $yaml);
+        self::assertStringContainsString('name: durin-app', $yaml);
 
         $env = (string) file_get_contents($created . DIRECTORY_SEPARATOR . '.env');
         self::assertMatchesRegularExpression('/^APP_NAME=smoke-app$/m', $env);
 
-        self::assertCount(2, $runner->commands);
+        self::assertCount(3, $runner->commands);
         self::assertSame('create-project', $runner->commands[0][1]);
         self::assertSame(AppPackage::createProjectArgument(), $runner->commands[0][2]);
         self::assertSame($created, $runner->commands[0][3]);
-        self::assertSame('doctor', $runner->commands[1][1]);
+        self::assertSame('init', $runner->commands[1][1]);
+        self::assertSame('--preset=minimal', $runner->commands[1][2]);
+        self::assertSame('doctor', $runner->commands[2][1]);
 
         rewind($stdout);
         $out = stream_get_contents($stdout) ?: '';
-        self::assertStringContainsString('Creating application via Composer create-project...', $out);
-        self::assertStringContainsString('Customizing application identity...', $out);
-        self::assertStringContainsString('Running Durin Doctor...', $out);
-        self::assertStringContainsString('Durin application created: smoke-app', $out);
-        self::assertStringContainsString('Path:' . PHP_EOL . '  ' . $created, $out);
-        self::assertStringContainsString('Next:' . PHP_EOL . '  cd ' . $created, $out);
-        self::assertStringContainsString('vendor/bin/durin doctor', $out);
-        self::assertStringContainsString('vendor/bin/forge server:install', $out);
+        self::assertStringContainsString('Preparing project...', $out);
+        self::assertStringContainsString('Created smoke-app', $out);
+        self::assertStringContainsString('Path: ' . $created, $out);
+        self::assertStringContainsString('Preset: minimal', $out);
+        self::assertStringContainsString('Runner: eregion', $out);
+        self::assertStringContainsString('cd ' . $created, $out);
     }
 
     public function testTargetConflictExitCode(): void
@@ -123,6 +143,7 @@ final class FakeCreateProjectIntegrationTest extends TestCase
             stdout: $stdout,
             stderr: $stderr,
             cwd: $this->tempRoot,
+            interactive: false,
         );
 
         $code = $app->run(['durin', 'new', 'taken']);
@@ -146,7 +167,7 @@ final class FakeCreateProjectIntegrationTest extends TestCase
         file_put_contents($target . DIRECTORY_SEPARATOR . 'durin.yaml', <<<'YAML'
 application:
   name: durin-app
-  preset: minimal
+  preset: uninitialized
 
 architecture:
   modules: false
@@ -154,7 +175,6 @@ architecture:
 YAML);
 
         file_put_contents($target . DIRECTORY_SEPARATOR . '.env.example', "APP_NAME=durin-app\nAPP_ENV=development\n");
-        file_put_contents($target . DIRECTORY_SEPARATOR . 'src' . DIRECTORY_SEPARATOR . 'Kernel.php', "<?php\n");
         file_put_contents(
             $target . DIRECTORY_SEPARATOR . 'vendor' . DIRECTORY_SEPARATOR . 'bin' . DIRECTORY_SEPARATOR . 'durin',
             "#!/bin/sh\nexit 0\n",
@@ -190,16 +210,16 @@ final class RecordingProcessRunner implements ProcessRunner
     public array $commands = [];
 
     /**
-     * @param callable(list<string>, ?string): ProcessResult $handler
+     * @param callable(list<string>, ?string, ?ProcessObserver): ProcessResult $handler
      */
     public function __construct(private $handler)
     {
     }
 
-    public function run(array $command, ?string $cwd = null): ProcessResult
+    public function run(array $command, ?string $cwd = null, ?ProcessObserver $observer = null): ProcessResult
     {
         $this->commands[] = $command;
 
-        return ($this->handler)($command, $cwd);
+        return ($this->handler)($command, $cwd, $observer);
     }
 }

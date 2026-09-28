@@ -92,11 +92,9 @@ ENV);
         self::assertSame('app/billing-api', $composer['name']);
         self::assertSame('^2.2', $composer['require']['ereborcodeforge/mithrilphp']);
 
+        // Installer must not mutate durin.yaml (Forge/preset owns the manifest).
         $yaml = (string) file_get_contents($this->fixture . DIRECTORY_SEPARATOR . 'durin.yaml');
-        self::assertMatchesRegularExpression('/^  name: billing-api$/m', $yaml);
-        self::assertStringContainsString('modules: false', $yaml);
-        self::assertStringContainsString('preset: minimal', $yaml);
-        self::assertSame(1, preg_match_all('/^  name:/m', $yaml));
+        self::assertStringContainsString('name: durin-app', $yaml);
 
         $env = (string) file_get_contents($this->fixture . DIRECTORY_SEPARATOR . '.env');
         self::assertMatchesRegularExpression('/^APP_NAME=billing-api$/m', $env);

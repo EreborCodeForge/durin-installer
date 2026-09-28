@@ -5,7 +5,8 @@ declare(strict_types=1);
 namespace EreborCodeForge\Durin\Installer\Project;
 
 /**
- * Customizes application-owned metadata after create-project.
+ * Customizes installer-owned metadata after create-project.
+ * Forge/preset owns durin.yaml — this class must not mutate it.
  *
  * @internal
  */
@@ -14,7 +15,6 @@ final class ProjectCustomizer
     public function customize(string $projectRoot, ProjectName $name): void
     {
         $this->updateComposerJson($projectRoot, $name);
-        $this->updateDurinYaml($projectRoot, $name);
         $this->ensureEnv($projectRoot, $name);
     }
 
@@ -46,47 +46,6 @@ final class ProjectCustomizer
 
         if (file_put_contents($path, $encoded) === false) {
             throw new \RuntimeException('Unable to write composer.json.');
-        }
-    }
-
-    private function updateDurinYaml(string $projectRoot, ProjectName $name): void
-    {
-        $path = $projectRoot . DIRECTORY_SEPARATOR . 'durin.yaml';
-        if (!is_file($path)) {
-            throw new \RuntimeException('durin.yaml is missing after create-project.');
-        }
-
-        $raw = file_get_contents($path);
-        if ($raw === false) {
-            throw new \RuntimeException('Unable to read durin.yaml.');
-        }
-
-        if (!preg_match('/^application:\s*$/m', $raw)) {
-            throw new \RuntimeException('durin.yaml is missing the expected application: section.');
-        }
-
-        if (!preg_match('/^  name:\s*.+$/m', $raw)) {
-            throw new \RuntimeException('durin.yaml is missing the expected application.name field.');
-        }
-
-        $updated = preg_replace(
-            '/^(  name:\s*).+$/m',
-            '${1}' . $name->slug(),
-            $raw,
-            1,
-            $count,
-        );
-
-        if ($updated === null || $count !== 1) {
-            throw new \RuntimeException('Failed to update durin.yaml application.name.');
-        }
-
-        if (preg_match_all('/^  name:\s*.+$/m', $updated) !== 1) {
-            throw new \RuntimeException('durin.yaml would contain duplicate application.name entries.');
-        }
-
-        if (file_put_contents($path, $updated) === false) {
-            throw new \RuntimeException('Unable to write durin.yaml.');
         }
     }
 

@@ -21,7 +21,9 @@ final class CommandParsingTest extends TestCase
         $out = $this->read($stdout);
         self::assertStringContainsString('Durin Installer', $out);
         self::assertStringContainsString('durin new <project>', $out);
-        self::assertStringContainsString('new    Create a new Durin application', $out);
+        self::assertStringContainsString('--preset=<id>', $out);
+        self::assertStringContainsString('presets', $out);
+        self::assertStringContainsString('new       Create a new Durin application', $out);
         self::assertStringNotContainsString('doctor', $out);
     }
 

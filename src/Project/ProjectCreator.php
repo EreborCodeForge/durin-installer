@@ -5,12 +5,19 @@ declare(strict_types=1);
 namespace EreborCodeForge\Durin\Installer\Project;
 
 use EreborCodeForge\Durin\Installer\Composer\ComposerLocator;
+use EreborCodeForge\Durin\Installer\Console\ForgeProgressRenderer;
+use EreborCodeForge\Durin\Installer\Console\ForgeStageMessages;
+use EreborCodeForge\Durin\Installer\Console\PlainProgressRenderer;
+use EreborCodeForge\Durin\Installer\Console\ProgressRenderer;
+use EreborCodeForge\Durin\Installer\Console\TerminalCapabilities;
+use EreborCodeForge\Durin\Installer\Process\ComposerProgressObserver;
+use EreborCodeForge\Durin\Installer\Process\JsonlForgeProgressObserver;
 use EreborCodeForge\Durin\Installer\Process\ProcessRunner;
 use EreborCodeForge\Durin\Installer\Support\AppPackage;
 use EreborCodeForge\Durin\Installer\Support\ExitCode;
 
 /**
- * Orchestrates create-project, customization, and post-create validation.
+ * Orchestrates create-project, customization, Forge init, and Doctor.
  *
  * @internal
  */
@@ -23,17 +30,28 @@ final class ProjectCreator
         private readonly bool $debug = false,
         private readonly mixed $output = null,
         private readonly mixed $statusOutput = null,
+        private readonly ?ProgressRenderer $progress = null,
+        private readonly bool $interactive = false,
     ) {
     }
 
     /**
-     * @return array{path: string, name: string}
+     * @return array{path: string, name: string, preset: string, runner: string}
      */
-    public function create(ProjectPath $target): array
+    public function create(ProjectPath $target, string $presetId): array
     {
+        $plain = !$this->interactive;
+        $progress = $this->progress ?? ($plain
+            ? new PlainProgressRenderer($this->statusOutput)
+            : new ForgeProgressRenderer(
+                $this->statusOutput,
+                TerminalCapabilities::supportsUnicode(),
+            ));
+
         $composer = $this->composerLocator->locate();
         $this->debugLine('Composer: ' . $composer);
         $this->debugLine('Target: ' . $target->absolutePath());
+        $this->debugLine('Preset: ' . $presetId);
 
         $parent = $target->parentDirectory();
         if (!is_dir($parent) && !mkdir($parent, 0777, true) && !is_dir($parent)) {
@@ -53,20 +71,23 @@ final class ProjectCreator
             '--prefer-dist',
         ];
 
-        $this->debugLine('Argv: ' . json_encode($command, JSON_UNESCAPED_SLASHES));
+        $createMessage = $plain
+            ? ForgeStageMessages::plainForStage('create.project')
+            : ForgeStageMessages::forStage('create.project');
+        $progress->start('create.project', $createMessage);
 
-        $this->statusLine('Creating application via Composer create-project...');
-        $this->statusLine('Package: ' . $packageArg);
-        $this->statusLine('Target:  ' . $target->absolutePath());
-        $this->statusLine('');
-
-        $result = $this->processRunner->run($command);
+        $result = $this->processRunner->run(
+            $command,
+            null,
+            new ComposerProgressObserver($progress, $createMessage),
+        );
 
         if (!$result->isSuccessful()) {
+            $progress->fail($plain ? 'Project creation failed.' : 'A forja esfriou antes da conclusão.');
             $message = "Composer create-project failed with exit code {$result->exitCode}.";
             if ($result->stderr !== '') {
                 $message .= "\n" . trim($result->stderr);
-            } elseif ($result->stdout !== '') {
+            } elseif ($result->stdout !== '' && $this->debug) {
                 $message .= "\n" . trim($result->stdout);
             }
 
@@ -78,19 +99,44 @@ final class ProjectCreator
             throw new CreationException($message, ExitCode::CREATE_PROJECT_FAILURE);
         }
 
+        $runner = 'eregion';
+
         try {
-            $this->statusLine('');
-            $this->statusLine('Customizing application identity...');
+            $customizeMessage = $plain
+                ? ForgeStageMessages::plainForStage('customize')
+                : ForgeStageMessages::forStage('customize');
+            $progress->update('customize', $customizeMessage);
             $this->customizer->customize($target->absolutePath(), $target->name());
 
-            $this->statusLine('Validating created application...');
             $this->validateCreatedApplication($target->absolutePath());
 
-            $this->statusLine('Running Durin Doctor...');
+            $initObserver = new JsonlForgeProgressObserver($progress, $presetId, $plain);
+            $initResult = $this->runForgeInit($target->absolutePath(), $presetId, $initObserver);
+            if (!$initResult->isSuccessful()) {
+                $progress->fail($plain ? 'Preset initialization failed.' : 'A forja esfriou antes da conclusão.');
+                $message = "Forge init failed with exit code {$initResult->exitCode}.";
+                if ($initResult->stderr !== '') {
+                    $message .= "\n" . trim($initResult->stderr);
+                } elseif ($initResult->stdout !== '') {
+                    $message .= "\n" . trim($initResult->stdout);
+                }
+                $message = "Preset: {$presetId}\nStage: runtime/scaffold\n\n" . $message;
+                throw new CreationException($message, ExitCode::POST_CREATE_VALIDATION_FAILURE);
+            }
+
+            $complete = $initObserver->completePayload();
+            $runner = $complete['runner'] ?? 'eregion';
+            $presetId = $complete['preset'] ?? $presetId;
+
+            $doctorMessage = $plain
+                ? ForgeStageMessages::plainForStage('doctor')
+                : ForgeStageMessages::forStage('doctor');
+            $progress->update('doctor', $doctorMessage);
             $this->runDoctor($target->absolutePath());
         } catch (CreationException $e) {
             throw $e;
         } catch (\Throwable $e) {
+            $progress->fail($plain ? 'Post-create failed.' : 'A forja esfriou antes da conclusão.');
             throw new CreationException(
                 $e->getMessage(),
                 ExitCode::POST_CREATE_VALIDATION_FAILURE,
@@ -98,15 +144,21 @@ final class ProjectCreator
             );
         }
 
+        $slug = $target->name()->slug();
+        $success = $plain
+            ? "Created {$slug}."
+            : "{$slug} foi forjado com sucesso.";
+        $progress->succeed($success);
+
         return [
             'path' => $target->absolutePath(),
-            'name' => $target->name()->slug(),
+            'name' => $slug,
+            'preset' => $presetId,
+            'runner' => $runner,
         ];
     }
 
     /**
-     * Exposed for tests: build the exact create-project argv.
-     *
      * @return list<string>
      */
     public function buildCreateProjectCommand(string $composerBinary, string $targetPath): array
@@ -125,21 +177,37 @@ final class ProjectCreator
     {
         $required = [
             'composer.json',
-            'durin.yaml',
-            '.env',
-            'src' . DIRECTORY_SEPARATOR . 'Kernel.php',
             'vendor' . DIRECTORY_SEPARATOR . 'bin' . DIRECTORY_SEPARATOR . 'durin',
         ];
 
         foreach ($required as $relative) {
             $path = $projectRoot . DIRECTORY_SEPARATOR . $relative;
-            if (!file_exists($path)) {
+            if (!file_exists($path) && !(PHP_OS_FAMILY === 'Windows' && is_file($path . '.bat'))) {
                 throw new CreationException(
                     "Created application is missing required file:\n  {$path}",
                     ExitCode::POST_CREATE_VALIDATION_FAILURE,
                 );
             }
         }
+    }
+
+    private function runForgeInit(
+        string $projectRoot,
+        string $presetId,
+        JsonlForgeProgressObserver $observer,
+    ): \EreborCodeForge\Durin\Installer\Process\ProcessResult {
+        $durin = $projectRoot . DIRECTORY_SEPARATOR . 'vendor' . DIRECTORY_SEPARATOR . 'bin' . DIRECTORY_SEPARATOR . 'durin';
+        if (PHP_OS_FAMILY === 'Windows' && is_file($durin . '.bat')) {
+            $durin .= '.bat';
+        }
+
+        $runner = $this->processRunner;
+
+        return $runner->run(
+            [$durin, 'init', '--preset=' . $presetId, '--progress=jsonl'],
+            $projectRoot,
+            $observer,
+        );
     }
 
     private function runDoctor(string $projectRoot): void
@@ -161,16 +229,6 @@ final class ProjectCreator
 
             throw new CreationException($message, ExitCode::POST_CREATE_VALIDATION_FAILURE);
         }
-    }
-
-    private function statusLine(string $line): void
-    {
-        $stream = $this->statusOutput;
-        if (!is_resource($stream)) {
-            return;
-        }
-
-        fwrite($stream, $line . PHP_EOL);
     }
 
     private function debugLine(string $line): void

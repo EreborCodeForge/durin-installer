@@ -70,21 +70,39 @@ final class NewCommandPathOutputTest extends TestCase
             {
             }
 
-            public function run(array $command, ?string $cwd = null): ProcessResult
+            public function run(array $command, ?string $cwd = null, ?\EreborCodeForge\Durin\Installer\Process\ProcessObserver $observer = null): ProcessResult
             {
                 $this->commands[] = $command;
+                $observer?->onStart();
 
                 if (($command[1] ?? null) === 'create-project') {
                     $this->test->scaffoldFakeApp($command[3] ?? '');
+                    $result = new ProcessResult(0, "Created\n", '');
+                    $observer?->onFinish($result);
 
-                    return new ProcessResult(0, "Created\n", '');
+                    return $result;
+                }
+
+                if (($command[1] ?? null) === 'init') {
+                    $observer?->onStdout("{\"type\":\"progress\",\"stage\":\"preset.resolve\",\"message\":\"Resolving preset\"}\n");
+                    $observer?->onStdout("{\"type\":\"complete\",\"preset\":\"minimal\",\"runner\":\"eregion\"}\n");
+                    $result = new ProcessResult(0, '', '');
+                    $observer?->onFinish($result);
+
+                    return $result;
                 }
 
                 if (($command[1] ?? null) === 'doctor') {
-                    return new ProcessResult(0, "OK\n", '');
+                    $result = new ProcessResult(0, "OK\n", '');
+                    $observer?->onFinish($result);
+
+                    return $result;
                 }
 
-                return new ProcessResult(1, '', 'unexpected command');
+                $result = new ProcessResult(1, '', 'unexpected command');
+                $observer?->onFinish($result);
+
+                return $result;
             }
         };
 
@@ -100,6 +118,7 @@ final class NewCommandPathOutputTest extends TestCase
             stderr: $stderr,
             cwd: $cwd,
             installerRoot: $this->tempRoot . DIRECTORY_SEPARATOR . 'installer-pkg',
+            interactive: false,
         );
 
         $code = $app->run(['durin', 'new', $input]);
@@ -112,11 +131,11 @@ final class NewCommandPathOutputTest extends TestCase
         rewind($stdout);
         $out = stream_get_contents($stdout) ?: '';
 
-        self::assertStringContainsString('Durin application created: billing', $out);
-        self::assertStringContainsString('Path:' . PHP_EOL . '  ' . $expectedPath, $out);
-        self::assertStringContainsString('Next:' . PHP_EOL . '  cd ' . $expectedPath, $out);
-        self::assertDoesNotMatchRegularExpression('/^  cd billing$/m', $out);
-        self::assertStringContainsString('Creating application via Composer create-project...', $out);
+        self::assertStringContainsString('Created billing', $out);
+        self::assertStringContainsString('Path: ' . $expectedPath, $out);
+        self::assertStringContainsString('cd ' . $expectedPath, $out);
+        self::assertStringContainsString('Preparing project...', $out);
+        self::assertStringContainsString('Preset: minimal', $out);
     }
 
     public function scaffoldFakeApp(string $target): void

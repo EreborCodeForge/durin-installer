@@ -4,10 +4,14 @@ declare(strict_types=1);
 
 namespace EreborCodeForge\Durin\Installer\Command;
 
+use EreborCodeForge\Durin\Installer\Console\TerminalCapabilities;
 use EreborCodeForge\Durin\Installer\Project\CreationException;
 use EreborCodeForge\Durin\Installer\Project\ProjectCreator;
 use EreborCodeForge\Durin\Installer\Project\ProjectPath;
 use EreborCodeForge\Durin\Installer\Support\ExitCode;
+use EreborCodeForge\Durin\Presets\Preset\UnknownPresetException;
+use EreborCodeForge\Durin\Presets\Registry\DefaultPresetRegistryFactory;
+use EreborCodeForge\Durin\Presets\Registry\PresetRegistry;
 
 /**
  * @internal
@@ -20,6 +24,7 @@ final class NewCommand
         private readonly mixed $stderr = null,
         private readonly ?string $cwd = null,
         private readonly ?string $installerRoot = null,
+        private readonly ?PresetRegistry $registry = null,
     ) {
     }
 
@@ -28,24 +33,47 @@ final class NewCommand
      */
     public function run(array $args): int
     {
+        $presetOption = null;
         $filtered = [];
         foreach ($args as $arg) {
             if ($arg === '--no-interaction') {
                 continue;
+            }
+            if (str_starts_with($arg, '--preset=')) {
+                $presetOption = substr($arg, strlen('--preset='));
+                continue;
+            }
+            if ($arg === '--preset') {
+                $this->error('Missing value for --preset.');
+                $this->error('Usage: durin new <project> [--preset=<id>]');
+
+                return ExitCode::INVALID_USAGE;
             }
             $filtered[] = $arg;
         }
 
         if ($filtered === []) {
             $this->error('Missing project name.');
-            $this->error('Usage: durin new <project>');
+            $this->error('Usage: durin new <project> [--preset=<id>]');
 
             return ExitCode::INVALID_USAGE;
         }
 
         if (count($filtered) > 1) {
             $this->error('Too many arguments.');
-            $this->error('Usage: durin new <project>');
+            $this->error('Usage: durin new <project> [--preset=<id>]');
+
+            return ExitCode::INVALID_USAGE;
+        }
+
+        $registry = $this->registry ?? (new DefaultPresetRegistryFactory())->create();
+
+        try {
+            $presetId = $presetOption !== null && $presetOption !== ''
+                ? $registry->definition($presetOption)->id()
+                : $registry->default()->id();
+        } catch (UnknownPresetException $e) {
+            $this->error($e->getMessage());
 
             return ExitCode::INVALID_USAGE;
         }
@@ -74,7 +102,7 @@ final class NewCommand
         }
 
         try {
-            $created = $this->creator->create($target);
+            $created = $this->creator->create($target, $presetId);
         } catch (CreationException $e) {
             $this->error($e->getMessage());
 
@@ -92,19 +120,18 @@ final class NewCommand
 
         $slug = $created['name'];
         $path = $created['path'];
+        $preset = $created['preset'];
+        $runner = $created['runner'];
 
-        $this->line("Durin application created: {$slug}");
         $this->line('');
-        $this->line('Path:');
-        $this->line("  {$path}");
+        $this->line("Preset: {$preset}");
+        $this->line("Runner: {$runner}");
+        $this->line("Path: {$path}");
         $this->line('');
         $this->line('Next:');
         $this->line("  cd {$path}");
         $this->line('  vendor/bin/durin doctor');
         $this->line('  vendor/bin/durin dev');
-        $this->line('');
-        $this->line('Optional (local Eregion server is not installed by create-project):');
-        $this->line('  vendor/bin/forge server:install');
 
         return ExitCode::SUCCESS;
     }
