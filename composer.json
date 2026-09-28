@@ -11,13 +11,6 @@
     "require-dev": {
         "phpunit/phpunit": "^12.5"
     },
-    "repositories": [
-        {
-            "type": "vcs",
-            "url": "https://github.com/EreborCodeForge/durin-presets.git",
-            "canonical": true
-        }
-    ],
     "autoload": {
         "psr-4": {
             "EreborCodeForge\\Durin\\Installer\\": "src/"
@@ -34,7 +27,7 @@
     "scripts": {
         "test": "phpunit"
     },
-    "minimum-stability": "dev",
+    "minimum-stability": "stable",
     "prefer-stable": true,
     "config": {
         "sort-packages": true
