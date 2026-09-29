@@ -4,14 +4,12 @@ declare(strict_types=1);
 
 namespace EreborCodeForge\Durin\Installer\Command;
 
-use EreborCodeForge\Durin\Installer\Console\TerminalCapabilities;
+use EreborCodeForge\Durin\Installer\Preset\PresetCatalog;
+use EreborCodeForge\Durin\Installer\Preset\UnknownPresetException;
 use EreborCodeForge\Durin\Installer\Project\CreationException;
 use EreborCodeForge\Durin\Installer\Project\ProjectCreator;
 use EreborCodeForge\Durin\Installer\Project\ProjectPath;
 use EreborCodeForge\Durin\Installer\Support\ExitCode;
-use EreborCodeForge\Durin\Presets\Preset\UnknownPresetException;
-use EreborCodeForge\Durin\Presets\Registry\DefaultPresetRegistryFactory;
-use EreborCodeForge\Durin\Presets\Registry\PresetRegistry;
 
 /**
  * @internal
@@ -24,7 +22,7 @@ final class NewCommand
         private readonly mixed $stderr = null,
         private readonly ?string $cwd = null,
         private readonly ?string $installerRoot = null,
-        private readonly ?PresetRegistry $registry = null,
+        private readonly ?PresetCatalog $catalog = null,
     ) {
     }
 
@@ -66,12 +64,12 @@ final class NewCommand
             return ExitCode::INVALID_USAGE;
         }
 
-        $registry = $this->registry ?? (new DefaultPresetRegistryFactory())->create();
+        $catalog = $this->catalog ?? new PresetCatalog();
 
         try {
             $presetId = $presetOption !== null && $presetOption !== ''
-                ? $registry->definition($presetOption)->id()
-                : $registry->default()->id();
+                ? $catalog->get($presetOption)['id']
+                : $catalog->defaultId();
         } catch (UnknownPresetException $e) {
             $this->error($e->getMessage());
 

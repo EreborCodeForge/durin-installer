@@ -11,9 +11,9 @@ use EreborCodeForge\Durin\Installer\Console\TerminalCapabilities;
 use EreborCodeForge\Durin\Installer\Process\ProcOpenProcessRunner;
 use EreborCodeForge\Durin\Installer\Process\ProcessRunner;
 use EreborCodeForge\Durin\Installer\Project\ProjectCreator;
+use EreborCodeForge\Durin\Installer\Preset\PresetCatalog;
 use EreborCodeForge\Durin\Installer\Support\ExitCode;
 use EreborCodeForge\Durin\Installer\Support\InstallerVersion;
-use EreborCodeForge\Durin\Presets\Registry\PresetRegistry;
 
 /**
  * CLI entrypoint: argv parsing, help, version, and command dispatch.
@@ -30,7 +30,7 @@ final class Application
         private readonly ?string $cwd = null,
         private readonly ?string $installerRoot = null,
         private readonly ?bool $debug = null,
-        private readonly ?PresetRegistry $registry = null,
+        private readonly ?PresetCatalog $catalog = null,
         private readonly ?bool $interactive = null,
     ) {
     }
@@ -114,7 +114,7 @@ final class Application
             $this->stderr,
             $this->cwd,
             $this->installerRoot,
-            $this->registry,
+            $this->catalog,
         );
 
         return $command->run($args);
@@ -125,7 +125,7 @@ final class Application
      */
     private function runPresets(array $args): int
     {
-        return (new PresetsCommand($this->stdout, $this->stderr, $this->registry))->run($args);
+        return (new PresetsCommand($this->stdout, $this->stderr, $this->catalog))->run($args);
     }
 
     private function unknownCommand(string $command): int
@@ -148,7 +148,7 @@ final class Application
         $this->line('');
         $this->line('Commands:');
         $this->line('  new       Create a new Durin application');
-        $this->line('  presets   List presets from durin-presets');
+        $this->line('  presets   List available presets');
 
         return ExitCode::SUCCESS;
     }
