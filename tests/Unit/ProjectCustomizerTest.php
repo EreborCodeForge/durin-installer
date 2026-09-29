@@ -22,7 +22,7 @@ final class ProjectCustomizerTest extends TestCase
             'type' => 'project',
             'require' => [
                 'php' => '^8.5',
-                'ereborcodeforge/mithrilphp' => '^2.2',
+                'ereborcodeforge/mithrilphp' => '^3.0',
             ],
             'autoload' => [
                 'psr-4' => ['App\\' => 'src/'],
@@ -90,7 +90,7 @@ ENV);
             JSON_THROW_ON_ERROR,
         );
         self::assertSame('app/billing-api', $composer['name']);
-        self::assertSame('^2.2', $composer['require']['ereborcodeforge/mithrilphp']);
+        self::assertSame('^3.0', $composer['require']['ereborcodeforge/mithrilphp']);
 
         // Installer must not mutate durin.yaml (Forge/preset owns the manifest).
         $yaml = (string) file_get_contents($this->fixture . DIRECTORY_SEPARATOR . 'durin.yaml');
