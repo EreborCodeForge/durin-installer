@@ -121,11 +121,13 @@ final class NewCommand
         $slug = $created['name'];
         $path = $created['path'];
         $preset = $created['preset'];
-        $runner = $created['runner'];
+        $execution = $created['execution'];
+        $supervisor = $created['supervisor'];
 
         $this->line('');
         $this->line("Preset: {$preset}");
-        $this->line("Runner: {$runner}");
+        $this->line("Runtime: {$execution}");
+        $this->line("Supervisor: {$supervisor}");
         $this->line("Path: {$path}");
         $this->line('');
         $this->line('Next:');

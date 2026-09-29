@@ -22,7 +22,7 @@ final class ForgeStageMessages
             'scaffold.plan' => 'Lendo o desenho da forja...',
             'scaffold.apply' => 'Martelando a estrutura...',
             'runtime.resolve' => 'Escolhendo o fogo da forja...',
-            'runtime.install' => 'Despertando Eregion...',
+            'runtime.install' => 'Instalando o runtime...',
             'runtime.configure' => 'Gravando as runas do runtime...',
             'validate' => 'Inspecionando a obra...',
             'doctor' => 'Inspecionando a obra...',
@@ -38,7 +38,7 @@ final class ForgeStageMessages
             'preset.resolve', 'scaffold.plan', 'scaffold.apply' => $preset !== ''
                 ? 'Applying preset: ' . $preset
                 : 'Applying preset...',
-            'runtime.resolve', 'runtime.install', 'runtime.configure' => 'Installing runtime: eregion',
+            'runtime.resolve', 'runtime.install', 'runtime.configure' => 'Installing runtime...',
             'validate', 'doctor' => 'Validating application...',
             default => 'Working...',
         };

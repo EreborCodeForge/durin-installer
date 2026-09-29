@@ -36,7 +36,7 @@ final class ProjectCreator
     }
 
     /**
-     * @return array{path: string, name: string, preset: string, runner: string}
+     * @return array{path: string, name: string, preset: string, execution: string, supervisor: string}
      */
     public function create(ProjectPath $target, string $presetId): array
     {
@@ -99,7 +99,8 @@ final class ProjectCreator
             throw new CreationException($message, ExitCode::CREATE_PROJECT_FAILURE);
         }
 
-        $runner = 'eregion';
+        $execution = '';
+        $supervisor = 'none';
 
         try {
             $customizeMessage = $plain
@@ -125,8 +126,21 @@ final class ProjectCreator
             }
 
             $complete = $initObserver->completePayload();
-            $runner = $complete['runner'] ?? 'eregion';
-            $presetId = $complete['preset'] ?? $presetId;
+            if ($complete === [] || !isset($complete['runtime'])) {
+                $progress->fail($plain ? 'Preset initialization failed.' : 'A forja esfriou antes da conclusão.');
+                $detail = $initObserver->sawInvalidComplete()
+                    ? 'Forge complete payload missing required runtime.'
+                    : 'Forge complete payload was not received.';
+                $message = "Preset: {$presetId}\nStage: complete\n\n{$detail}";
+                if ($initResult->stderr !== '') {
+                    $message .= "\n" . trim($initResult->stderr);
+                }
+                throw new CreationException($message, ExitCode::POST_CREATE_VALIDATION_FAILURE);
+            }
+
+            $presetId = $complete['preset'];
+            $execution = $complete['runtime']['execution'];
+            $supervisor = $complete['runtime']['supervisor'] ?? 'none';
 
             $doctorMessage = $plain
                 ? ForgeStageMessages::plainForStage('doctor')
@@ -154,7 +168,8 @@ final class ProjectCreator
             'path' => $target->absolutePath(),
             'name' => $slug,
             'preset' => $presetId,
-            'runner' => $runner,
+            'execution' => $execution,
+            'supervisor' => $supervisor,
         ];
     }
 

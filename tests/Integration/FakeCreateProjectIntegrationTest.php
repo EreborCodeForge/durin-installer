@@ -49,7 +49,7 @@ final class FakeCreateProjectIntegrationTest extends TestCase
 
             if (($command[1] ?? null) === 'init') {
                 $observer?->onStdout("{\"type\":\"progress\",\"stage\":\"scaffold.apply\",\"message\":\"Applying scaffold\"}\n");
-                $observer?->onStdout("{\"type\":\"complete\",\"preset\":\"minimal\",\"runner\":\"eregion\"}\n");
+                $observer?->onStdout("{\"type\":\"complete\",\"preset\":\"minimal\",\"runtime\":{\"mode\":\"http\",\"execution\":\"mithril-http\",\"supervisor\":\"eregion\"}}\n");
                 $result = new ProcessResult(0, '', '');
                 $observer?->onFinish($result);
 
@@ -122,7 +122,9 @@ final class FakeCreateProjectIntegrationTest extends TestCase
         self::assertStringContainsString('Created smoke-app', $out);
         self::assertStringContainsString('Path: ' . $created, $out);
         self::assertStringContainsString('Preset: minimal', $out);
-        self::assertStringContainsString('Runner: eregion', $out);
+        self::assertStringContainsString('Runtime: mithril-http', $out);
+        self::assertStringContainsString('Supervisor: eregion', $out);
+        self::assertStringNotContainsString('Runner:', $out);
         self::assertStringContainsString('cd ' . $created, $out);
     }
 

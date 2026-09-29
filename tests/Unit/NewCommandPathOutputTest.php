@@ -85,7 +85,7 @@ final class NewCommandPathOutputTest extends TestCase
 
                 if (($command[1] ?? null) === 'init') {
                     $observer?->onStdout("{\"type\":\"progress\",\"stage\":\"preset.resolve\",\"message\":\"Resolving preset\"}\n");
-                    $observer?->onStdout("{\"type\":\"complete\",\"preset\":\"minimal\",\"runner\":\"eregion\"}\n");
+                    $observer?->onStdout("{\"type\":\"complete\",\"preset\":\"minimal\",\"runtime\":{\"mode\":\"http\",\"execution\":\"mithril-http\",\"supervisor\":\"eregion\"}}\n");
                     $result = new ProcessResult(0, '', '');
                     $observer?->onFinish($result);
 
