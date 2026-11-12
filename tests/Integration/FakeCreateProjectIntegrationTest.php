@@ -86,7 +86,7 @@ final class FakeCreateProjectIntegrationTest extends TestCase
             interactive: false,
         );
 
-        $code = $app->run(['durin', 'new', 'smoke-app']);
+        $code = $app->run(['durin', 'new', 'smoke-app', '--preset=minimal']);
 
         self::assertSame(ExitCode::SUCCESS, $code);
 

@@ -36,7 +36,7 @@ validate target
       ↓
 resolve Composer
       ↓
-composer create-project ereborcodeforge/durin-app:^0.1.2
+composer create-project ereborcodeforge/durin-app:^0.4
       ↓
 customize project identity
       ↓

@@ -65,15 +65,16 @@ final class NewCommand
         }
 
         $catalog = $this->catalog ?? new PresetCatalog();
+        $presetId = null;
 
-        try {
-            $presetId = $presetOption !== null && $presetOption !== ''
-                ? $catalog->get($presetOption)['id']
-                : $catalog->defaultId();
-        } catch (UnknownPresetException $e) {
-            $this->error($e->getMessage());
+        if ($presetOption !== null && $presetOption !== '') {
+            try {
+                $presetId = $catalog->get($presetOption)['id'];
+            } catch (UnknownPresetException $e) {
+                $this->error($e->getMessage());
 
-            return ExitCode::INVALID_USAGE;
+                return ExitCode::INVALID_USAGE;
+            }
         }
 
         $input = $filtered[0];
@@ -123,6 +124,18 @@ final class NewCommand
         $supervisor = $created['supervisor'];
 
         $this->line('');
+        if ($preset === 'uninitialized') {
+            $this->line('Preset: uninitialized');
+            $this->line("Path: {$path}");
+            $this->line('');
+            $this->line('Next:');
+            $this->line("  cd {$path}");
+            $this->line('  vendor/bin/durin init --preset=minimal');
+            $this->line('  vendor/bin/durin doctor');
+
+            return ExitCode::SUCCESS;
+        }
+
         $this->line("Preset: {$preset}");
         $this->line("Runtime: {$execution}");
         $this->line("Supervisor: {$supervisor}");

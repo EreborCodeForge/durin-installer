@@ -5,7 +5,7 @@ Global project installer for the Durin ecosystem.
 ```bash
 composer global require ereborcodeforge/durin-installer
 
-durin new billing-api
+durin new billing-api --preset=minimal
 
 cd billing-api
 
@@ -25,7 +25,7 @@ V1 of the installer owns only `new`, `--help`, and `--version`. It does **not** 
 ## Fallback without the installer
 
 ```bash
-composer create-project ereborcodeforge/durin-app:^0.1.2 billing-api
+composer create-project ereborcodeforge/durin-app:^0.4 billing-api
 ```
 
 ## What this package is

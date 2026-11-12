@@ -3,7 +3,7 @@
 ## Commands
 
 ```bash
-durin new <project>
+durin new <project> [--preset=minimal|service|worker]
 durin --help
 durin --version
 durin help

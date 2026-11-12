@@ -17,19 +17,19 @@ No custom Composer repositories are required or injected.
 
 ## Distribution smoke
 
-After `v0.1.1` is on Packagist:
+After `v0.3.0` is on Packagist:
 
 ```bash
 export COMPOSER_HOME="<temporary-composer-home>"
 
 composer global require \
-  ereborcodeforge/durin-installer:^0.1 \
+  ereborcodeforge/durin-installer:^0.3 \
   --no-interaction \
   --prefer-dist
 
 GLOBAL_BIN="$(composer global config bin-dir --absolute)"
 
-"$GLOBAL_BIN/durin" new smoke-app
+"$GLOBAL_BIN/durin" new smoke-app --preset=minimal
 
 cd smoke-app
 

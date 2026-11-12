@@ -121,7 +121,7 @@ final class NewCommandPathOutputTest extends TestCase
             interactive: false,
         );
 
-        $code = $app->run(['durin', 'new', $input]);
+        $code = $app->run(['durin', 'new', $input, '--preset=minimal']);
 
         rewind($stderr);
         $err = stream_get_contents($stderr) ?: '';

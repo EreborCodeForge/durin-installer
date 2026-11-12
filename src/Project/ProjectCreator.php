@@ -38,7 +38,7 @@ final class ProjectCreator
     /**
      * @return array{path: string, name: string, preset: string, execution: string, supervisor: string}
      */
-    public function create(ProjectPath $target, string $presetId): array
+    public function create(ProjectPath $target, ?string $presetId): array
     {
         $plain = !$this->interactive;
         $progress = $this->progress ?? ($plain
@@ -51,7 +51,7 @@ final class ProjectCreator
         $composer = $this->composerLocator->locate();
         $this->debugLine('Composer: ' . $composer);
         $this->debugLine('Target: ' . $target->absolutePath());
-        $this->debugLine('Preset: ' . $presetId);
+        $this->debugLine('Preset: ' . ($presetId ?? '(none — skip init)'));
 
         $parent = $target->parentDirectory();
         if (!is_dir($parent) && !mkdir($parent, 0777, true) && !is_dir($parent)) {
@@ -110,6 +110,22 @@ final class ProjectCreator
             $this->customizer->customize($target->absolutePath(), $target->name());
 
             $this->validateCreatedApplication($target->absolutePath());
+
+            if ($presetId === null || $presetId === '') {
+                $slug = $target->name()->slug();
+                $success = $plain
+                    ? "Created {$slug}."
+                    : "{$slug} foi forjado com sucesso.";
+                $progress->succeed($success);
+
+                return [
+                    'path' => $target->absolutePath(),
+                    'name' => $slug,
+                    'preset' => 'uninitialized',
+                    'execution' => '',
+                    'supervisor' => 'none',
+                ];
+            }
 
             $initObserver = new JsonlForgeProgressObserver($progress, $presetId, $plain);
             $initResult = $this->runForgeInit($target->absolutePath(), $presetId, $initObserver);
