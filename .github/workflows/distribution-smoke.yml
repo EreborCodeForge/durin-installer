@@ -34,9 +34,8 @@ jobs:
             https://repo.packagist.org/p2/ereborcodeforge/durin-installer.json || echo 000)
           echo "Packagist HTTP status: ${code}"
           if [ "${code}" != "200" ]; then
-            echo "available=false" >> "$GITHUB_OUTPUT"
-            echo "::notice::ereborcodeforge/durin-installer not on Packagist yet — skip distribution smoke."
-            exit 0
+            echo "::error::ereborcodeforge/durin-installer is not on Packagist (HTTP ${code})."
+            exit 1
           fi
 
           version=$(php -r '
@@ -57,9 +56,8 @@ jobs:
           ')
 
           if [ -z "${version}" ]; then
-            echo "available=false" >> "$GITHUB_OUTPUT"
-            echo "::notice::Packagist has no durin-installer >= 0.3.0 yet — skip until release syncs."
-            exit 0
+            echo "::error::Packagist has no ereborcodeforge/durin-installer >= 0.3.0."
+            exit 1
           fi
 
           echo "available=true" >> "$GITHUB_OUTPUT"
