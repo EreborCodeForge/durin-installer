@@ -6,7 +6,7 @@
     "require": {
         "php": "^8.5",
         "ext-json": "*",
-        "ereborcodeforge/durin-presets": "^0.3"
+        "ereborcodeforge/durin-presets": "^0.3.6"
     },
     "repositories": [
         {

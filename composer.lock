@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "75bba83b0d4a213ebe2ff48eb0ef1657",
+    "content-hash": "d51d74ca8230b6f48ceff44479e5288d",
     "packages": [
         {
             "name": "ereborcodeforge/durin-core",
@@ -12,7 +12,7 @@
             "dist": {
                 "type": "path",
                 "url": "../durin-core",
-                "reference": "6c8a28aca58292c804d0b301ce744e2fbab72c1f"
+                "reference": "c5ab148d50138805404eda7c4b8465fce6235c82"
             },
             "require": {
                 "php": "^8.5"
@@ -57,10 +57,10 @@
             "dist": {
                 "type": "path",
                 "url": "../durin-presets",
-                "reference": "4aa7ca4dcce9f8d00e680b62d2e03cca5510d721"
+                "reference": "36f79ab8f836fd5684566c931643790f50befe53"
             },
             "require": {
-                "ereborcodeforge/durin-core": "^0.2",
+                "ereborcodeforge/durin-core": "^0.2.1",
                 "php": "^8.5"
             },
             "require-dev": {
