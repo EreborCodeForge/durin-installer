@@ -36,9 +36,16 @@ final class ProjectCreator
     }
 
     /**
+     * @param list<string> $initArguments
+     * @param array<string, bool> $expectedFeatures
      * @return array{path: string, name: string, preset: string, execution: string, supervisor: string}
      */
-    public function create(ProjectPath $target, ?string $presetId): array
+    public function create(
+        ProjectPath $target,
+        ?string $presetId,
+        array $initArguments = [],
+        array $expectedFeatures = [],
+    ): array
     {
         $plain = !$this->interactive;
         $progress = $this->progress ?? ($plain
@@ -128,7 +135,7 @@ final class ProjectCreator
             }
 
             $initObserver = new JsonlForgeProgressObserver($progress, $presetId, $plain);
-            $initResult = $this->runForgeInit($target->absolutePath(), $presetId, $initObserver);
+            $initResult = $this->runForgeInit($target->absolutePath(), $presetId, $initObserver, $initArguments);
             if (!$initResult->isSuccessful()) {
                 $progress->fail($plain ? 'Preset initialization failed.' : 'A forja esfriou antes da conclusão.');
                 $message = "Forge init failed with exit code {$initResult->exitCode}.";
@@ -157,6 +164,7 @@ final class ProjectCreator
             $presetId = $complete['preset'];
             $execution = $complete['runtime']['execution'];
             $supervisor = $complete['runtime']['supervisor'] ?? 'none';
+            $this->assertCompleteFeatures($complete, $expectedFeatures, $initResult);
 
             $doctorMessage = $plain
                 ? ForgeStageMessages::plainForStage('doctor')
@@ -222,10 +230,14 @@ final class ProjectCreator
         }
     }
 
+    /**
+     * @param list<string> $initArguments
+     */
     private function runForgeInit(
         string $projectRoot,
         string $presetId,
         JsonlForgeProgressObserver $observer,
+        array $initArguments = [],
     ): \EreborCodeForge\Durin\Installer\Process\ProcessResult {
         $durin = $projectRoot . DIRECTORY_SEPARATOR . 'vendor' . DIRECTORY_SEPARATOR . 'bin' . DIRECTORY_SEPARATOR . 'durin';
         if (PHP_OS_FAMILY === 'Windows' && is_file($durin . '.bat')) {
@@ -235,10 +247,42 @@ final class ProjectCreator
         $runner = $this->processRunner;
 
         return $runner->run(
-            [$durin, 'init', '--preset=' . $presetId, '--progress=jsonl'],
+            array_merge([$durin, 'init', '--preset=' . $presetId, '--progress=jsonl'], $initArguments),
             $projectRoot,
             $observer,
         );
+    }
+
+    /**
+     * @param array<string, mixed> $complete
+     * @param array<string, bool> $expectedFeatures
+     */
+    private function assertCompleteFeatures(
+        array $complete,
+        array $expectedFeatures,
+        \EreborCodeForge\Durin\Installer\Process\ProcessResult $initResult,
+    ): void {
+        if ($expectedFeatures === []) {
+            return;
+        }
+
+        $features = $complete['features'] ?? null;
+        if (!is_array($features)) {
+            throw new CreationException(
+                "Installed Forge did not return complete.features. Upgrade ereborcodeforge/durins-forge.\n"
+                . trim($initResult->stdout . "\n" . $initResult->stderr),
+                ExitCode::POST_CREATE_VALIDATION_FAILURE,
+            );
+        }
+
+        foreach ($expectedFeatures as $name => $expected) {
+            if (($features[$name] ?? false) !== $expected) {
+                throw new CreationException(
+                    "Forge complete.features.{$name} does not match the requested selection.",
+                    ExitCode::POST_CREATE_VALIDATION_FAILURE,
+                );
+            }
+        }
     }
 
     private function runDoctor(string $projectRoot): void

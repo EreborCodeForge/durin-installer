@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace EreborCodeForge\Durin\Installer\Command;
 
+use EreborCodeForge\Durin\Installer\Preset\NewInvocation;
 use EreborCodeForge\Durin\Installer\Preset\PresetCatalog;
 use EreborCodeForge\Durin\Installer\Preset\UnknownPresetException;
 use EreborCodeForge\Durin\Installer\Project\CreationException;
@@ -31,53 +32,27 @@ final class NewCommand
      */
     public function run(array $args): int
     {
-        $presetOption = null;
-        $filtered = [];
-        foreach ($args as $arg) {
-            if ($arg === '--no-interaction') {
-                continue;
-            }
-            if (str_starts_with($arg, '--preset=')) {
-                $presetOption = substr($arg, strlen('--preset='));
-                continue;
-            }
-            if ($arg === '--preset') {
-                $this->error('Missing value for --preset.');
-                $this->error('Usage: durin new <project> [--preset=<id>]');
-
-                return ExitCode::INVALID_USAGE;
-            }
-            $filtered[] = $arg;
-        }
-
-        if ($filtered === []) {
-            $this->error('Missing project name.');
-            $this->error('Usage: durin new <project> [--preset=<id>]');
-
-            return ExitCode::INVALID_USAGE;
-        }
-
-        if (count($filtered) > 1) {
-            $this->error('Too many arguments.');
-            $this->error('Usage: durin new <project> [--preset=<id>]');
-
-            return ExitCode::INVALID_USAGE;
-        }
-
         $catalog = $this->catalog ?? new PresetCatalog();
-        $presetId = null;
-
-        if ($presetOption !== null && $presetOption !== '') {
-            try {
-                $presetId = $catalog->get($presetOption)['id'];
-            } catch (UnknownPresetException $e) {
-                $this->error($e->getMessage());
-
-                return ExitCode::INVALID_USAGE;
+        try {
+            $invocation = NewInvocation::parse($args, $catalog);
+        } catch (UnknownPresetException | \InvalidArgumentException $e) {
+            $this->error($e->getMessage());
+            if ($e->getMessage() === 'Missing project name.' || str_starts_with($e->getMessage(), 'Missing value') || $e->getMessage() === 'Too many arguments.') {
+                $this->error('Usage: durin new <project> [--preset=<id>] [--with=<capabilities>] [--supervisor=auto|none|eregion]');
             }
+
+            return ExitCode::INVALID_USAGE;
         }
 
-        $input = $filtered[0];
+        if ($invocation->project === null || $invocation->project === '') {
+            $this->error('Missing project name.');
+            $this->error('Usage: durin new <project> [--preset=<id>] [--with=<capabilities>] [--supervisor=auto|none|eregion]');
+
+            return ExitCode::INVALID_USAGE;
+        }
+
+        $presetId = $invocation->presetId;
+        $input = $invocation->project;
 
         try {
             $target = ProjectPath::resolve(
@@ -101,7 +76,12 @@ final class NewCommand
         }
 
         try {
-            $created = $this->creator->create($target, $presetId);
+            $created = $this->creator->create(
+                $target,
+                $presetId,
+                $invocation->initArguments,
+                $invocation->expectedFeatures,
+            );
         } catch (CreationException $e) {
             $this->error($e->getMessage());
 

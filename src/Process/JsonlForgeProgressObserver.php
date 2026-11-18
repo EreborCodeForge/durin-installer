@@ -19,7 +19,8 @@ final class JsonlForgeProgressObserver implements ProcessObserver
     /**
      * @var array{
      *     preset: string,
-     *     runtime: array{mode: string, execution: string, supervisor: ?string}
+     *     runtime: array{mode: string, execution: string, supervisor: ?string},
+     *     features?: array<string, bool>
      * }|array{}
      */
     private array $complete = [];
@@ -74,7 +75,8 @@ final class JsonlForgeProgressObserver implements ProcessObserver
     /**
      * @return array{
      *     preset: string,
-     *     runtime: array{mode: string, execution: string, supervisor: ?string}
+     *     runtime: array{mode: string, execution: string, supervisor: ?string},
+     *     features?: array<string, bool>
      * }|array{}
      */
     public function completePayload(): array
@@ -126,7 +128,8 @@ final class JsonlForgeProgressObserver implements ProcessObserver
      *
      * @return array{
      *     preset: string,
-     *     runtime: array{mode: string, execution: string, supervisor: ?string}
+     *     runtime: array{mode: string, execution: string, supervisor: ?string},
+     *     features?: array<string, bool>
      * }|null
      */
     private function parseComplete(array $row): ?array
@@ -155,7 +158,7 @@ final class JsonlForgeProgressObserver implements ProcessObserver
             $preset = $this->preset;
         }
 
-        return [
+        $payload = [
             'preset' => $preset,
             'runtime' => [
                 'mode' => $mode,
@@ -163,5 +166,16 @@ final class JsonlForgeProgressObserver implements ProcessObserver
                 'supervisor' => $supervisor,
             ],
         ];
+        if (isset($row['features']) && is_array($row['features'])) {
+            $features = [];
+            foreach ($row['features'] as $name => $value) {
+                if (is_string($name)) {
+                    $features[$name] = (bool) $value;
+                }
+            }
+            $payload['features'] = $features;
+        }
+
+        return $payload;
     }
 }

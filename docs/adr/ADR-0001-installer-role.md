@@ -21,7 +21,7 @@ without duplicating framework, preset, or skeleton logic.
 3. Canonical global binary is `durin` only.
 4. V1 owns only `new`, help, and version.
 5. Applications are created via Packagist (`ereborcodeforge/durin-app:^0.4`). Init runs only when `--preset` is passed.
-6. The installer does not depend on `durin-core`, `durin-presets`, or `durin-architecture`.
+6. The installer does not depend directly on `durin-core`, `durin-architecture`, or `durin-app`. ECO-08 adds a read-only dependency on `durin-presets` so preset IDs are not copied. Runtime rules stay in Forge.
 7. V1 creates the minimal application only.
 8. V1 does not proxy arbitrary Forge/project commands.
 9. Partial create-project failures are reported without automatic recursive cleanup.

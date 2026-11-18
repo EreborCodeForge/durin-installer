@@ -29,6 +29,11 @@ jobs:
           coverage: none
           tools: composer:v2
 
+      - name: Checkout sibling catalogs
+        run: |
+          git clone --depth 1 https://github.com/EreborCodeForge/durin-core.git ../durin-core
+          git clone --depth 1 https://github.com/EreborCodeForge/durin-presets.git ../durin-presets
+
       - name: Validate composer.json
         run: composer validate --strict --no-check-publish
 
@@ -53,11 +58,15 @@ jobs:
                 fwrite(STDERR, "composer.json must expose bin/durin\n");
                 exit(1);
             }
-            foreach (["ereborcodeforge/durin-core", "ereborcodeforge/durin-presets", "ereborcodeforge/durin-architecture", "ereborcodeforge/durin-app"] as $forbidden) {
+            foreach (["ereborcodeforge/durin-core", "ereborcodeforge/durin-architecture", "ereborcodeforge/durin-app"] as $forbidden) {
                 if (isset($json["require"][$forbidden]) || isset($json["require-dev"][$forbidden])) {
                     fwrite(STDERR, "Installer must not depend on {$forbidden}\n");
                     exit(1);
                 }
+            }
+            if (!isset($json["require"]["ereborcodeforge/durin-presets"])) {
+                fwrite(STDERR, "Installer must read presets from ereborcodeforge/durin-presets\n");
+                exit(1);
             }
             if (PHP_VERSION_ID < 80500) {
                 fwrite(STDERR, "CI must run on PHP 8.5+, got: " . PHP_VERSION . "\n");

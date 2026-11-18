@@ -4,46 +4,35 @@ declare(strict_types=1);
 
 namespace EreborCodeForge\Durin\Installer\Preset;
 
+use EreborCodeForge\Durin\Presets\Registry\DefaultPresetRegistryFactory;
+use EreborCodeForge\Durin\Presets\Registry\PresetRegistry;
+
 /**
- * Discovery-only preset catalog for installer UX.
- *
- * Knows id / label / description only — never runtime rules.
+ * Read-only adapter over the durin-presets catalog.
+ * The installer does not keep its own preset IDs.
  *
  * @internal
  */
 final class PresetCatalog
 {
-    private const string DEFAULT_ID = 'minimal';
+    public function __construct(
+        private readonly ?PresetRegistry $registry = null,
+    ) {
+    }
 
-    /**
-     * @var array<string, array{id: string, label: string, description: string}>
-     */
-    private const array PRESETS = [
-        'minimal' => [
-            'id' => 'minimal',
-            'label' => 'Minimal',
-            'description' => 'Minimal application',
-        ],
-        'service' => [
-            'id' => 'service',
-            'label' => 'Service',
-            'description' => 'General-purpose structured backend service',
-        ],
-        'worker' => [
-            'id' => 'worker',
-            'label' => 'Worker',
-            'description' => 'Background worker',
-        ],
-    ];
+    public function registry(): PresetRegistry
+    {
+        return $this->registry ?? (new DefaultPresetRegistryFactory())->create();
+    }
 
     public function defaultId(): string
     {
-        return self::DEFAULT_ID;
+        return $this->registry()->defaultId() ?? 'minimal';
     }
 
     public function has(string $id): bool
     {
-        return isset(self::PRESETS[$id]);
+        return $this->registry()->has($id);
     }
 
     /**
@@ -51,11 +40,17 @@ final class PresetCatalog
      */
     public function get(string $id): array
     {
-        if (!isset(self::PRESETS[$id])) {
+        if (!$this->has($id)) {
             throw UnknownPresetException::forName($id, $this->ids());
         }
 
-        return self::PRESETS[$id];
+        $metadata = $this->registry()->definition($id)->metadata();
+
+        return [
+            'id' => $metadata->id,
+            'label' => $metadata->label,
+            'description' => $metadata->description,
+        ];
     }
 
     /**
@@ -63,7 +58,7 @@ final class PresetCatalog
      */
     public function ids(): array
     {
-        return array_keys(self::PRESETS);
+        return $this->registry()->ids();
     }
 
     /**
@@ -71,6 +66,24 @@ final class PresetCatalog
      */
     public function all(): array
     {
-        return array_values(self::PRESETS);
+        $rows = [];
+        foreach ($this->registry()->all() as $definition) {
+            $metadata = $definition->metadata();
+            $rows[] = [
+                'id' => $metadata->id,
+                'label' => $metadata->label,
+                'description' => $metadata->description,
+            ];
+        }
+
+        return $rows;
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    public function jsonCatalog(): array
+    {
+        return $this->registry()->catalog();
     }
 }

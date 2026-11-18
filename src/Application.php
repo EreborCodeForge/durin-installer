@@ -141,8 +141,8 @@ final class Application
         $this->line('Durin Installer');
         $this->line('');
         $this->line('Usage:');
-        $this->line('  durin new <project> [--preset=<id>]');
-        $this->line('  durin presets');
+        $this->line('  durin new <project> [--preset=<id>] [--with=<capabilities>] [--supervisor=auto|none|eregion]');
+        $this->line('  durin presets [--format=text|json]');
         $this->line('  durin --version');
         $this->line('  durin --help');
         $this->line('');
