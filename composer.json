@@ -44,7 +44,8 @@
         }
     },
     "bin": [
-        "bin/durin"
+        "bin/durin",
+        "bin/durins-forge"
     ],
     "scripts": {
         "test": "phpunit"

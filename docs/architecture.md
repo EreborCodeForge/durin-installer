@@ -21,7 +21,7 @@ durins-forge
 |---------|------|
 | `durin-installer` | Global `durin new` UX, Composer create-project, identity customization |
 | `durin-app` | Canonical application artifact / skeleton |
-| `durins-forge` | Project/framework CLI (`vendor/bin/durin`) |
+| `durins-forge` | Project/framework CLI. Global name is a launcher; the runtime is `vendor/bin/durins-forge` or `php bin/durins-forge` in the checkout |
 | `durin-presets` | Preset definitions |
 | `durin-core` | Safe mutation primitives |
 
@@ -42,7 +42,7 @@ customize project identity
       ↓
 create .env
       ↓
-vendor/bin/durin doctor
+vendor/bin/durins-forge doctor
       ↓
 print next steps
 ```

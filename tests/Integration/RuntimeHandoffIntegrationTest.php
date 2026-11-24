@@ -18,6 +18,9 @@ final class RuntimeHandoffIntegrationTest extends TestCase
     private string $tempRoot;
     private string $composerBinary;
 
+    /** @var list<list<string>> */
+    public array $recorded = [];
+
     protected function setUp(): void
     {
         $this->tempRoot = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'durin-handoff-' . bin2hex(random_bytes(4));
@@ -78,6 +81,13 @@ final class RuntimeHandoffIntegrationTest extends TestCase
         self::assertStringContainsString("Runtime: {$expectedRuntime}", $stdout);
         self::assertStringContainsString("Supervisor: {$expectedSupervisor}", $stdout);
         self::assertStringNotContainsString('Runner:', $stdout);
+        if (str_contains($completeLine, '"mode":"job"')) {
+            self::assertStringContainsString('durins-forge run', $stdout);
+            self::assertStringNotContainsString('durins-forge dev', $stdout);
+        } else {
+            self::assertStringContainsString('durins-forge dev', $stdout);
+            self::assertStringNotContainsString('durins-forge run', $stdout);
+        }
     }
 
     public function testMissingRuntimePayloadFailsClearly(): void
@@ -108,9 +118,10 @@ final class RuntimeHandoffIntegrationTest extends TestCase
     }
 
     /**
+     * @param list<string> $extraArgs
      * @return array{0: string, 1: string, 2: int}
      */
-    private function runNew(string $preset, string $completeJsonl): array
+    private function runNew(string $preset, string $completeJsonl, array $extraArgs = []): array
     {
         $runner = new class ($this, $completeJsonl) implements ProcessRunner {
             public function __construct(
@@ -121,6 +132,7 @@ final class RuntimeHandoffIntegrationTest extends TestCase
 
             public function run(array $command, ?string $cwd = null, ?ProcessObserver $observer = null): ProcessResult
             {
+                $this->test->recorded[] = $command;
                 $observer?->onStart();
 
                 if (($command[1] ?? null) === 'create-project') {
@@ -170,7 +182,7 @@ final class RuntimeHandoffIntegrationTest extends TestCase
         );
 
         $name = 'app-' . bin2hex(random_bytes(3));
-        $code = $app->run(['durin', 'new', $name, '--preset=' . $preset]);
+        $code = $app->run(array_merge(['durin', 'new', $name, '--preset=' . $preset], $extraArgs));
 
         rewind($stdout);
         rewind($stderr);
@@ -180,6 +192,35 @@ final class RuntimeHandoffIntegrationTest extends TestCase
             stream_get_contents($stderr) ?: '',
             $code,
         ];
+    }
+
+    public function testConsumerPresetIsForwardedToTheLocalForgeBinary(): void
+    {
+        $this->recorded = [];
+        $complete = '{"type":"complete","preset":"consumer","runtime":{"mode":"job","execution":"mithril-job","supervisor":"eregion"},"features":{"consumer":true,"producer":false}}';
+        [$stdout, $stderr, $code] = $this->runNew('consumer', $complete . "\n", [
+            '--supervisor=eregion',
+            '--scaling=resources',
+            '--workers-max=4',
+        ]);
+
+        self::assertSame(ExitCode::SUCCESS, $code, $stderr);
+        $init = null;
+        foreach ($this->recorded as $command) {
+            if (($command[1] ?? null) === 'init') {
+                $init = $command;
+            }
+        }
+        self::assertNotNull($init);
+        self::assertStringEndsWith('durins-forge', str_replace('\\', '/', $init[0]));
+        self::assertContains('--preset=consumer', $init);
+        self::assertContains('--progress=jsonl', $init);
+        self::assertContains('--supervisor=eregion', $init);
+        self::assertContains('--scaling=resources', $init);
+        self::assertContains('--workers-max=4', $init);
+        self::assertStringContainsString('Runtime: mithril-job', $stdout);
+        self::assertStringContainsString('Supervisor: eregion', $stdout);
+        self::assertStringContainsString('durins-forge run', $stdout);
     }
 
     public function scaffoldFakeApp(string $target): void
@@ -204,11 +245,11 @@ architecture:
 YAML);
 
         file_put_contents($target . DIRECTORY_SEPARATOR . '.env.example', "APP_NAME=durin-app\nAPP_ENV=development\n");
-        file_put_contents(
-            $target . DIRECTORY_SEPARATOR . 'vendor' . DIRECTORY_SEPARATOR . 'bin' . DIRECTORY_SEPARATOR . 'durin',
-            "#!/bin/sh\nexit 0\n",
-        );
-        chmod($target . DIRECTORY_SEPARATOR . 'vendor' . DIRECTORY_SEPARATOR . 'bin' . DIRECTORY_SEPARATOR . 'durin', 0755);
+        foreach (['durin', 'durins-forge'] as $binary) {
+            $path = $target . DIRECTORY_SEPARATOR . 'vendor' . DIRECTORY_SEPARATOR . 'bin' . DIRECTORY_SEPARATOR . $binary;
+            file_put_contents($path, "#!/bin/sh\nexit 0\n");
+            chmod($path, 0755);
+        }
     }
 
     private function removeTree(string $path): void

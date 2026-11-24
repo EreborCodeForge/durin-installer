@@ -161,11 +161,11 @@ YAML);
 
         file_put_contents($target . DIRECTORY_SEPARATOR . '.env.example', "APP_NAME=durin-app\nAPP_ENV=development\n");
         file_put_contents($target . DIRECTORY_SEPARATOR . 'src' . DIRECTORY_SEPARATOR . 'Kernel.php', "<?php\n");
-        file_put_contents(
-            $target . DIRECTORY_SEPARATOR . 'vendor' . DIRECTORY_SEPARATOR . 'bin' . DIRECTORY_SEPARATOR . 'durin',
-            "#!/bin/sh\nexit 0\n",
-        );
-        chmod($target . DIRECTORY_SEPARATOR . 'vendor' . DIRECTORY_SEPARATOR . 'bin' . DIRECTORY_SEPARATOR . 'durin', 0755);
+        foreach (['durin', 'durins-forge'] as $binary) {
+            $path = $target . DIRECTORY_SEPARATOR . 'vendor' . DIRECTORY_SEPARATOR . 'bin' . DIRECTORY_SEPARATOR . $binary;
+            file_put_contents($path, "#!/bin/sh\nexit 0\n");
+            chmod($path, 0755);
+        }
     }
 
     private function removeTree(string $path): void

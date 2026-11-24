@@ -102,6 +102,7 @@ final class NewCommand
         $preset = $created['preset'];
         $execution = $created['execution'];
         $supervisor = $created['supervisor'];
+        $mode = $created['mode'];
 
         $this->line('');
         if ($preset === 'uninitialized') {
@@ -110,8 +111,8 @@ final class NewCommand
             $this->line('');
             $this->line('Next:');
             $this->line("  cd {$path}");
-            $this->line('  vendor/bin/durin init --preset=minimal');
-            $this->line('  vendor/bin/durin doctor');
+            $this->line('  durins-forge init --preset=minimal');
+            $this->line('  durins-forge doctor');
 
             return ExitCode::SUCCESS;
         }
@@ -123,10 +124,19 @@ final class NewCommand
         $this->line('');
         $this->line('Next:');
         $this->line("  cd {$path}");
-        $this->line('  vendor/bin/durin doctor');
-        $this->line('  vendor/bin/durin dev');
+        $this->line('  durins-forge doctor');
+        $this->line('  durins-forge ' . $this->followUpCommand($mode, $execution));
 
         return ExitCode::SUCCESS;
+    }
+
+    private function followUpCommand(string $mode, string $execution): string
+    {
+        if ($mode === 'job' || str_contains($execution, 'job')) {
+            return 'run';
+        }
+
+        return 'dev';
     }
 
     private function line(string $message): void

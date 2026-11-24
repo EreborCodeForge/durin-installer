@@ -114,6 +114,9 @@ final class FakeCreateProjectIntegrationTest extends TestCase
         self::assertSame($created, $runner->commands[0][3]);
         self::assertSame('init', $runner->commands[1][1]);
         self::assertSame('--preset=minimal', $runner->commands[1][2]);
+        self::assertSame('--progress=jsonl', $runner->commands[1][3]);
+        self::assertStringEndsWith('durins-forge', str_replace('\\', '/', $runner->commands[1][0]));
+        self::assertStringEndsWith('durins-forge', str_replace('\\', '/', $runner->commands[2][0]));
         self::assertSame('doctor', $runner->commands[2][1]);
 
         rewind($stdout);
@@ -126,6 +129,8 @@ final class FakeCreateProjectIntegrationTest extends TestCase
         self::assertStringContainsString('Supervisor: eregion', $out);
         self::assertStringNotContainsString('Runner:', $out);
         self::assertStringContainsString('cd ' . $created, $out);
+        self::assertStringContainsString('durins-forge dev', $out);
+        self::assertStringNotContainsString('vendor/bin/durin', $out);
     }
 
     public function testTargetConflictExitCode(): void
@@ -177,11 +182,11 @@ architecture:
 YAML);
 
         file_put_contents($target . DIRECTORY_SEPARATOR . '.env.example', "APP_NAME=durin-app\nAPP_ENV=development\n");
-        file_put_contents(
-            $target . DIRECTORY_SEPARATOR . 'vendor' . DIRECTORY_SEPARATOR . 'bin' . DIRECTORY_SEPARATOR . 'durin',
-            "#!/bin/sh\nexit 0\n",
-        );
-        chmod($target . DIRECTORY_SEPARATOR . 'vendor' . DIRECTORY_SEPARATOR . 'bin' . DIRECTORY_SEPARATOR . 'durin', 0755);
+        foreach (['durin', 'durins-forge'] as $binary) {
+            $path = $target . DIRECTORY_SEPARATOR . 'vendor' . DIRECTORY_SEPARATOR . 'bin' . DIRECTORY_SEPARATOR . $binary;
+            file_put_contents($path, "#!/bin/sh\nexit 0\n");
+            chmod($path, 0755);
+        }
     }
 
     private function removeTree(string $path): void

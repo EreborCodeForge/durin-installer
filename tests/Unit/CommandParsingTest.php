@@ -24,7 +24,8 @@ final class CommandParsingTest extends TestCase
         self::assertStringContainsString('--preset=<id>', $out);
         self::assertStringContainsString('presets', $out);
         self::assertStringContainsString('new       Create a new Durin application', $out);
-        self::assertStringNotContainsString('doctor', $out);
+        self::assertStringContainsString('durins-forge doctor', $out);
+        self::assertStringNotContainsString("\n  doctor", $out);
     }
 
     public function testVersionOutput(): void

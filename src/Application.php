@@ -149,6 +149,10 @@ final class Application
         $this->line('Commands:');
         $this->line('  new       Create a new Durin application');
         $this->line('  presets   List available presets');
+        $this->line('');
+        $this->line('Framework commands belong to the local durins-forge CLI.');
+        $this->line('Examples: durins-forge doctor, durins-forge run, durins-forge dev.');
+        $this->line('This installer does not dispatch them. In CI or a container, use vendor/bin/durins-forge.');
 
         return ExitCode::SUCCESS;
     }

@@ -9,18 +9,22 @@ durin new billing-api --preset=minimal
 
 cd billing-api
 
-vendor/bin/durin doctor
-vendor/bin/durin dev
+durins-forge doctor
+durins-forge dev
 ```
 
 ## Global vs project CLI
 
 | Context | Binary | Role |
 |---------|--------|------|
-| Global | `durin` | Creates new applications |
-| Project | `vendor/bin/durin` | Framework/project DX (doctor, dev, optimize, …) |
+| Global | `durin` | Creates new applications and lists presets |
+| Global launcher | `durins-forge` | Runs the Forge CLI installed in the current project, or `bin/durins-forge` in a Forge checkout |
+| Project / CI | `vendor/bin/durins-forge` | Same local CLI when the global launcher is not on `PATH` |
+| Compatibility | `vendor/bin/durin` | Legacy alias of the local CLI. Not recommended |
 
-V1 of the installer owns only `new`, `--help`, and `--version`. It does **not** proxy project commands.
+`durin` does not dispatch project commands. `durins-forge` does not install a global copy of the framework. Both global binaries come from this package and need Composer's global `bin-dir` on `PATH`. This package does not change `PATH`.
+
+If a shell lists `vendor/bin` before the global Composer `bin-dir`, the legacy `durin` alias can shadow the global `durin`. The name contract assumes the recommended `PATH` order.
 
 ## Fallback without the installer
 
@@ -30,15 +34,17 @@ composer create-project ereborcodeforge/durin-app:^0.4 billing-api
 
 ## What this package is
 
-- A Composer `library` with a global `durin` binary
+- A Composer `library` with global `durin` and `durins-forge` binaries
 - Orchestration around `composer create-project ereborcodeforge/durin-app`
+- A thin launcher that executes the local `durins-forge` entrypoint
 - Safe project identity customization (`composer.json`, `durin.yaml`, `.env`)
 
 ## What this package is not
 
 - A framework runtime
 - A preset or scaffolding engine
-- A proxy for `vendor/bin/durin` commands
+- A proxy that reimplements Forge commands
+- A global install of the framework
 
 ## Documentation
 

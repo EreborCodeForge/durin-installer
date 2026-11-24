@@ -54,7 +54,7 @@ final class NewInvocation
 
             $key = substr($body, 0, $eq);
             $value = substr($body, $eq + 1);
-            if (!in_array($key, ['preset', 'with', 'supervisor', 'scaling', 'workers-min', 'workers-max', 'resource-class', 'memory-mb'], true)) {
+            if (!in_array($key, ['preset', 'with', 'supervisor', 'scaling', 'scaling-policy', 'resource-guard-mode', 'workers-min', 'workers-max', 'resource-class', 'memory-mb'], true)) {
                 throw new \InvalidArgumentException("Unknown option --{$key}.");
             }
             if (array_key_exists($key, $options) && $options[$key] !== $value) {
@@ -73,7 +73,7 @@ final class NewInvocation
             throw new \InvalidArgumentException('Missing value for --preset.');
         }
 
-        $workloadKeys = ['with', 'supervisor', 'scaling', 'workers-min', 'workers-max', 'resource-class', 'memory-mb'];
+        $workloadKeys = ['with', 'supervisor', 'scaling', 'scaling-policy', 'resource-guard-mode', 'workers-min', 'workers-max', 'resource-class', 'memory-mb'];
         $hasWorkload = false;
         foreach ($workloadKeys as $key) {
             if (array_key_exists($key, $options)) {
@@ -101,6 +101,10 @@ final class NewInvocation
             $workersMin = self::optionalInt($options, 'workers-min');
             $workersMax = self::optionalInt($options, 'workers-max');
             $memory = self::optionalInt($options, 'memory-mb');
+            $policy = isset($options['scaling-policy']) ? self::absolutePolicy($options['scaling-policy']) : null;
+            if ($policy !== null) {
+                $options['scaling-policy'] = $policy;
+            }
             (new WorkloadOptionPolicy())->compile(
                 $definition->id(),
                 $definition->runtime()->mode,
@@ -111,6 +115,8 @@ final class NewInvocation
                 $workersMax,
                 $options['resource-class'] ?? null,
                 $memory,
+                $policy,
+                $options['resource-guard-mode'] ?? null,
             );
         } catch (IncompatibleCapabilityException | WorkloadOptionException $e) {
             throw new \InvalidArgumentException($e->getMessage(), 0, $e);
@@ -120,7 +126,7 @@ final class NewInvocation
         if (isset($options['with'])) {
             $init[] = '--with=' . implode(',', $features);
         }
-        foreach (['supervisor', 'scaling', 'workers-min', 'workers-max', 'resource-class', 'memory-mb'] as $key) {
+        foreach (['supervisor', 'scaling', 'scaling-policy', 'resource-guard-mode', 'workers-min', 'workers-max', 'resource-class', 'memory-mb'] as $key) {
             if (isset($options[$key])) {
                 $init[] = '--' . $key . '=' . $options[$key];
             }
@@ -150,5 +156,28 @@ final class NewInvocation
         }
 
         return (int) $options[$key];
+    }
+
+    private static function absolutePolicy(string $path): string
+    {
+        if ($path === '' || strpbrk($path, "\0") !== false) {
+            throw new WorkloadOptionException('Invalid --scaling-policy path.');
+        }
+        $absolute = $path;
+        $windows = preg_match('/^[A-Za-z]:[\\\\\\/]/', $path) === 1;
+        $rooted = str_starts_with($path, '/') || str_starts_with($path, '\\\\');
+        if (!$windows && !$rooted) {
+            $cwd = getcwd();
+            if ($cwd === false) {
+                throw new WorkloadOptionException('Unable to resolve --scaling-policy.');
+            }
+            $absolute = $cwd . DIRECTORY_SEPARATOR . $path;
+        }
+        $real = realpath($absolute);
+        if ($real === false || !is_file($real) || is_link($real)) {
+            throw new WorkloadOptionException('--scaling-policy must be a regular file.');
+        }
+
+        return $real;
     }
 }

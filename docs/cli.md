@@ -4,10 +4,29 @@
 
 ```bash
 durin new <project> [--preset=minimal|service|worker]
+durin presets [--format=text|json]
 durin --help
 durin --version
 durin help
 ```
+
+`durin` only creates projects and lists presets. Framework commands use the global launcher, which executes the Forge version installed in the current project:
+
+```bash
+cd <project>
+durins-forge doctor
+durins-forge dev
+```
+
+In CI or a container, call the local binary directly:
+
+```bash
+vendor/bin/durins-forge doctor
+```
+
+Inside a `durins-forge` checkout the launcher runs `php`-equivalent `bin/durins-forge`. `vendor/bin/durin` remains a compatibility alias. If `vendor/bin` is earlier on `PATH` than Composer's global `bin-dir`, that alias can shadow global `durin`. This package does not change `PATH`.
+
+On Windows, Composer publishes `durins-forge.bat`. The launcher itself executes the PHP script with the current CLI interpreter and does not join a new process group. Ctrl+C in a Windows console is not injected by the launcher; a child still running when the launcher exits is terminated from the shutdown handler. Unix forwards SIGINT and SIGTERM to the child.
 
 Optional no-op flag (V1 has no interactive prompts):
 

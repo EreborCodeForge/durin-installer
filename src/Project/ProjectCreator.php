@@ -38,7 +38,7 @@ final class ProjectCreator
     /**
      * @param list<string> $initArguments
      * @param array<string, bool> $expectedFeatures
-     * @return array{path: string, name: string, preset: string, execution: string, supervisor: string}
+     * @return array{path: string, name: string, preset: string, execution: string, supervisor: string, mode: string}
      */
     public function create(
         ProjectPath $target,
@@ -108,6 +108,7 @@ final class ProjectCreator
 
         $execution = '';
         $supervisor = 'none';
+        $mode = '';
 
         try {
             $customizeMessage = $plain
@@ -131,6 +132,7 @@ final class ProjectCreator
                     'preset' => 'uninitialized',
                     'execution' => '',
                     'supervisor' => 'none',
+                    'mode' => '',
                 ];
             }
 
@@ -162,6 +164,7 @@ final class ProjectCreator
             }
 
             $presetId = $complete['preset'];
+            $mode = $complete['runtime']['mode'];
             $execution = $complete['runtime']['execution'];
             $supervisor = $complete['runtime']['supervisor'] ?? 'none';
             $this->assertCompleteFeatures($complete, $expectedFeatures, $initResult);
@@ -194,6 +197,7 @@ final class ProjectCreator
             'preset' => $presetId,
             'execution' => $execution,
             'supervisor' => $supervisor,
+            'mode' => $mode,
         ];
     }
 
@@ -216,7 +220,7 @@ final class ProjectCreator
     {
         $required = [
             'composer.json',
-            'vendor' . DIRECTORY_SEPARATOR . 'bin' . DIRECTORY_SEPARATOR . 'durin',
+            'vendor' . DIRECTORY_SEPARATOR . 'bin' . DIRECTORY_SEPARATOR . 'durins-forge',
         ];
 
         foreach ($required as $relative) {
@@ -239,10 +243,7 @@ final class ProjectCreator
         JsonlForgeProgressObserver $observer,
         array $initArguments = [],
     ): \EreborCodeForge\Durin\Installer\Process\ProcessResult {
-        $durin = $projectRoot . DIRECTORY_SEPARATOR . 'vendor' . DIRECTORY_SEPARATOR . 'bin' . DIRECTORY_SEPARATOR . 'durin';
-        if (PHP_OS_FAMILY === 'Windows' && is_file($durin . '.bat')) {
-            $durin .= '.bat';
-        }
+        $durin = $this->localForgeBinary($projectRoot);
 
         $runner = $this->processRunner;
 
@@ -287,10 +288,7 @@ final class ProjectCreator
 
     private function runDoctor(string $projectRoot): void
     {
-        $doctor = $projectRoot . DIRECTORY_SEPARATOR . 'vendor' . DIRECTORY_SEPARATOR . 'bin' . DIRECTORY_SEPARATOR . 'durin';
-        if (PHP_OS_FAMILY === 'Windows' && is_file($doctor . '.bat')) {
-            $doctor .= '.bat';
-        }
+        $doctor = $this->localForgeBinary($projectRoot);
 
         $result = $this->processRunner->run([$doctor, 'doctor'], $projectRoot);
 
@@ -304,6 +302,16 @@ final class ProjectCreator
 
             throw new CreationException($message, ExitCode::POST_CREATE_VALIDATION_FAILURE);
         }
+    }
+
+    private function localForgeBinary(string $projectRoot): string
+    {
+        $binary = $projectRoot . DIRECTORY_SEPARATOR . 'vendor' . DIRECTORY_SEPARATOR . 'bin' . DIRECTORY_SEPARATOR . 'durins-forge';
+        if (PHP_OS_FAMILY === 'Windows' && is_file($binary . '.bat')) {
+            $binary .= '.bat';
+        }
+
+        return $binary;
     }
 
     private function debugLine(string $line): void

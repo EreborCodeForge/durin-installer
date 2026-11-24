@@ -1,0 +1,32 @@
+#!/usr/bin/env php
+<?php
+
+declare(strict_types=1);
+
+use EreborCodeForge\Durin\Installer\Forge\LocalForgeDispatcher;
+
+$autoloadCandidates = [
+    dirname(__DIR__) . '/vendor/autoload.php',
+    dirname(__DIR__, 3) . '/autoload.php',
+];
+
+$autoload = null;
+foreach ($autoloadCandidates as $candidate) {
+    if (is_file($candidate)) {
+        $autoload = $candidate;
+        break;
+    }
+}
+
+if ($autoload === null) {
+    fwrite(STDERR, "Unable to find Composer autoload.php.\n");
+    exit(1);
+}
+
+require $autoload;
+
+$launcher = realpath(__FILE__);
+$cwd = getcwd();
+
+exit((new LocalForgeDispatcher(launcherRealpath: $launcher !== false ? $launcher : __FILE__))
+    ->run($argv, $cwd === false ? null : $cwd));
