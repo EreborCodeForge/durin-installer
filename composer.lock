@@ -4,15 +4,21 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "d51d74ca8230b6f48ceff44479e5288d",
+    "content-hash": "c33b67b4604ca5e48b4b69a1f4a67654",
     "packages": [
         {
             "name": "ereborcodeforge/durin-core",
-            "version": "0.2.1",
+            "version": "v0.2.2",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/EreborCodeForge/durin-core.git",
+                "reference": "5b5effca073cfcd24300f47c56a23516571e19d3"
+            },
             "dist": {
-                "type": "path",
-                "url": "../durin-core",
-                "reference": "c5ab148d50138805404eda7c4b8465fce6235c82"
+                "type": "zip",
+                "url": "https://api.github.com/repos/EreborCodeForge/durin-core/zipball/5b5effca073cfcd24300f47c56a23516571e19d3",
+                "reference": "5b5effca073cfcd24300f47c56a23516571e19d3",
+                "shasum": ""
             },
             "require": {
                 "php": "^8.5"
@@ -26,16 +32,7 @@
                     "EreborCodeForge\\Durin\\Core\\": "src/"
                 }
             },
-            "autoload-dev": {
-                "psr-4": {
-                    "EreborCodeForge\\Durin\\Core\\Tests\\": "tests/"
-                }
-            },
-            "scripts": {
-                "test": [
-                    "phpunit"
-                ]
-            },
+            "notification-url": "https://packagist.org/downloads/",
             "license": [
                 "MIT"
             ],
@@ -46,21 +43,28 @@
                 }
             ],
             "description": "Project model and deterministic tooling primitives for Durin.",
-            "transport-options": {
-                "symlink": true,
-                "relative": true
-            }
+            "support": {
+                "issues": "https://github.com/EreborCodeForge/durin-core/issues",
+                "source": "https://github.com/EreborCodeForge/durin-core/tree/v0.2.2"
+            },
+            "time": "2026-11-24T17:43:27+00:00"
         },
         {
             "name": "ereborcodeforge/durin-presets",
-            "version": "0.3.6",
+            "version": "v0.3.7",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/EreborCodeForge/durin-presets.git",
+                "reference": "fa202c36887b2000c1713bf0ee30958b6af3dc5b"
+            },
             "dist": {
-                "type": "path",
-                "url": "../durin-presets",
-                "reference": "36f79ab8f836fd5684566c931643790f50befe53"
+                "type": "zip",
+                "url": "https://api.github.com/repos/EreborCodeForge/durin-presets/zipball/fa202c36887b2000c1713bf0ee30958b6af3dc5b",
+                "reference": "fa202c36887b2000c1713bf0ee30958b6af3dc5b",
+                "shasum": ""
             },
             "require": {
-                "ereborcodeforge/durin-core": "^0.2.1",
+                "ereborcodeforge/durin-core": "^0.2.2",
                 "php": "^8.5"
             },
             "require-dev": {
@@ -72,16 +76,7 @@
                     "EreborCodeForge\\Durin\\Presets\\": "src/"
                 }
             },
-            "autoload-dev": {
-                "psr-4": {
-                    "EreborCodeForge\\Durin\\Presets\\Tests\\": "tests/"
-                }
-            },
-            "scripts": {
-                "test": [
-                    "phpunit"
-                ]
-            },
+            "notification-url": "https://packagist.org/downloads/",
             "license": [
                 "MIT"
             ],
@@ -92,10 +87,11 @@
                 }
             ],
             "description": "Architecture presets and project-shape policies for Durin.",
-            "transport-options": {
-                "symlink": true,
-                "relative": true
-            }
+            "support": {
+                "issues": "https://github.com/EreborCodeForge/durin-presets/issues",
+                "source": "https://github.com/EreborCodeForge/durin-presets/tree/v0.3.7"
+            },
+            "time": "2026-11-24T20:53:27+00:00"
         }
     ],
     "packages-dev": [
